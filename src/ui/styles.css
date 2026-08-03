@@ -26,6 +26,38 @@ body {
   padding: 1rem;
 }
 
+/* Narrow (default): exactly one panel visible, chosen by the active tab. */
+.panel {
+  display: none;
+}
+
+.app[data-tab='daily'] .panel-daily,
+.app[data-tab='citadel'] .panel-citadel,
+.app[data-tab='settings'] .panel-settings {
+  display: block;
+}
+
+/* Wide: Daily and Citadel sit side by side regardless of tab — same
+   components, more room. Settings still takes the full view when
+   selected, so the split is suppressed while data-tab is 'settings'. */
+@media (min-width: 900px) {
+  .app {
+    max-width: 960px;
+  }
+
+  .app:not([data-tab='settings']) .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .app:not([data-tab='settings']) .panel-daily,
+  .app:not([data-tab='settings']) .panel-citadel {
+    display: block;
+  }
+}
+
 .tabs {
   display: flex;
   gap: 0.5rem;
@@ -137,6 +169,20 @@ h1 {
   color: var(--bg);
 }
 
+.quest-row button {
+  padding: 0.35rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.quest-row button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
 .skyline {
   display: flex;
   gap: 1rem;
@@ -197,4 +243,163 @@ h1 {
   font-size: 0.7rem;
   color: var(--muted);
   text-transform: capitalize;
+}
+
+.settings-section {
+  border: 2px solid var(--line);
+  background: var(--panel);
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.settings-section h2 {
+  font-size: 0.9rem;
+  margin: 0 0 0.4rem;
+}
+
+.settings-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+}
+
+.settings-section button {
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.settings-section button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.settings-error {
+  color: var(--fg);
+  font-size: 0.8rem;
+  margin-top: 0.6rem;
+  border-left: 3px solid var(--line);
+  padding-left: 0.5rem;
+}
+
+.settings-success {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.spire-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}
+
+.new-domain-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.new-domain-form input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  background: var(--panel);
+  color: var(--fg);
+}
+
+.new-domain-form button {
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.new-domain-form button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.back-link,
+.danger-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.danger-link {
+  display: block;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.quest-editor {
+  border: 2px solid var(--line);
+  background: var(--panel);
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.quest-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.quest-editor input,
+.quest-editor select {
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.quest-editor-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.quest-editor-row label {
+  flex: 1;
+}
+
+.quest-editor-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quest-editor-actions button {
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.quest-editor-actions button:hover {
+  background: var(--fg);
+  color: var(--bg);
 }

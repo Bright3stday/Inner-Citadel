@@ -771,6 +771,14 @@ Not a commitment — a proposed sequence, one reviewable increment at a time per
 
 Steps 1, 2, 4, and 7 are pure functions with no React and no browser — they can be written and tested by either of us in isolation, which makes them the natural pieces to split.
 
+### Notes for steps not yet built
+
+Captured now so they aren't lost between conversations. None of this changes anything already built.
+
+- **Desktop layout (touches step 9 and beyond).** Desktop isn't a different app — same components, more room. `CitadelView` and `DailyView` render side by side above some viewport width via CSS layout only; no new component, no new state, no platform-specific logic inside the views themselves.
+- **The one genuinely platform-specific piece: storage location (step 9/10).** Manual export/import (built, §6) stays the phone path. Desktop should additionally be able to point storage at a real file — e.g. inside a Dropbox/Drive-synced folder — via the File System Access API, so syncing across desktops happens for free through whatever already syncs that folder, rather than manual export/import round-trips each time. This is a second storage backend behind the same `load()`/`save()` shape `storage.ts` already exposes — one module change, per the extension-point note in §7 about the native shell needing a different persistence backend. Scope this as its own increment: the File System Access API is Chromium-only (no Firefox/Safari desktop support), so it needs a feature-detected fallback to the existing manual flow, not a hard phone-vs-desktop branch.
+- **Pixel art (step 12).** Non-integer scaling makes 8-bit sprites blurry, not crisp — this will read as a mistake on a large monitor even though the same asset looks fine on phone. When real sprites replace the current CSS block-stack placeholder in `Spire.tsx`: set `image-rendering: pixelated` on every sprite element, and size every instance at an integer multiple of the sprite's native resolution (2x, 3x, 4x…) — never an arbitrary width/height that lands between multiples.
+
 ---
 
 *No implementation code will be written until this document is reviewed and approved.*

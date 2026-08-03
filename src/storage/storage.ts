@@ -2,14 +2,15 @@ import { emptyAppState } from '../model/factories'
 import type { AppState } from '../model/types'
 
 const KEY = 'innerCitadel.v1'
+const BACKUP_KEY = 'innerCitadel.backup'
 
 /**
  * Reads the single stored JSON document. Never returns undefined or a
  * partial object — first run gets a fresh empty state, corrupt JSON is
  * a loud failure rather than a silent reset. See docs/architecture.md §6.
  *
- * migrate.ts (schema upgrades) and transfer.ts (export/import, with the
- * backup-before-overwrite step) are deferred past this base pass.
+ * migrate.ts (schema upgrades) is still deferred — only schemaVersion 1
+ * exists so far.
  */
 export function load(): AppState {
   const raw = localStorage.getItem(KEY)
@@ -34,4 +35,18 @@ export function save(state: AppState): void {
  * stays the only module that does. */
 export function hasStoredState(): boolean {
   return localStorage.getItem(KEY) !== null
+}
+
+/**
+ * Written by transfer.ts immediately before an import overwrites the
+ * main document, so a bad import is recoverable. Not merged, not
+ * rotated — one slot, overwritten on each import.
+ */
+export function saveBackup(state: AppState): void {
+  localStorage.setItem(BACKUP_KEY, JSON.stringify(state))
+}
+
+export function loadBackup(): AppState | null {
+  const raw = localStorage.getItem(BACKUP_KEY)
+  return raw === null ? null : (JSON.parse(raw) as AppState)
 }
