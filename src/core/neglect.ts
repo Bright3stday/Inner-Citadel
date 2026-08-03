@@ -1,5 +1,5 @@
 import { NEGLECT_WEEKS } from './rules'
-import { lastCompletedWeeks, isWithinRange } from './dates'
+import { lastCompletedWeeks, isWithinRange, completedWeeksSince } from './dates'
 import type { Domain, LogEntry, Quest } from '../model/types'
 
 /**
@@ -7,6 +7,14 @@ import type { Domain, LogEntry, Quest } from '../model/types'
  * completed calendar weeks. Scoped at the domain level, per spec §7 —
  * a single quest lapsing is not the trigger. Retired quests count:
  * past work is still past work.
+ *
+ * A domain can't be neglected before it's had the chance to complete
+ * even one full week. lastCompletedWeeks() deliberately excludes the
+ * current in-progress week — so logging into a domain today, with no
+ * prior history, sums to zero in that window for the same reason
+ * genuine two-week abandonment does. Without the check below, a
+ * domain touched for the first time today would read identically to
+ * one abandoned two weeks ago. See docs/architecture.md §3.
  */
 export function isNeglected(
   domainId: string,
@@ -14,11 +22,19 @@ export function isNeglected(
   logs: LogEntry[],
   today: string,
 ): boolean {
-  const weeks = lastCompletedWeeks(today, NEGLECT_WEEKS)
   const domainQuestIds = new Set(quests.filter((q) => q.domainId === domainId).map((q) => q.id))
+  const domainLogs = logs.filter((log) => domainQuestIds.has(log.questId))
 
-  const total = logs
-    .filter((log) => domainQuestIds.has(log.questId))
+  if (domainLogs.length === 0) return false
+
+  const firstLogDate = domainLogs.reduce(
+    (min, log) => (log.forDate < min ? log.forDate : min),
+    domainLogs[0].forDate,
+  )
+  if (completedWeeksSince(firstLogDate, today).length === 0) return false
+
+  const weeks = lastCompletedWeeks(today, NEGLECT_WEEKS)
+  const total = domainLogs
     .filter((log) => weeks.some((week) => isWithinRange(log.forDate, week)))
     .reduce((sum, log) => sum + log.count, 0)
 

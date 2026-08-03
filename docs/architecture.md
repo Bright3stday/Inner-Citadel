@@ -325,7 +325,7 @@ Neglect beats thriving. A domain that was flourishing and then abandoned weather
 
 **Both guards exist to stop a specific silent bug. Do not remove them as redundant:**
 
-- **Rule 1** stops a brand-new domain rendering as `crumbling`. A domain created five minutes ago has zero contributions across the last two completed weeks, which trips the neglect rule exactly like genuine abandonment does. Nothing logged ever means there is nothing to judge yet.
+- **Rule 1** stops a brand-new domain with *zero logs, ever* from rendering as `crumbling`. It only covers that one case, though — a domain with *some* logs, all still within the current in-progress week, gets past rule 1 fine. That second case trips `isNeglected` for the same underlying reason (see the Neglect rule below), so it's guarded there instead, once, rather than duplicated at every call site.
 - **Rule 3's "≥1 active quest" clause** stops vacuous truth. "Every quest in an empty set met its target" evaluates to `true` in every language, so a domain with no active quests would render as `thriving` without this check.
 
 `deriveSpire()` wraps both functions and returns a `DomainSpire`. That is what `core/selectors.ts` calls; views never call the two halves separately.
@@ -354,9 +354,11 @@ The spec's intent is preserved. What it lacked was a way to say "tall *and* crum
 | 1–2 | `thriving` | Low structure, actively building. |
 | 3–5 | `thriving` | Tall and well-kept. |
 | 3–5 | `crumbling` | **Tall and visibly weathering** — built, then lapsed. |
-| 0 | `crumbling` | Unreachable by construction (condition rule 1). |
+| 0 | `crumbling` | Rare, not strictly unreachable — see note below. |
 
 The first and last-reachable rows are the entire reason for this design. They must not look alike.
+
+**0-height crumbling is now rare rather than impossible.** It was briefly *believed* unreachable (condition rule 1 alone), until real use surfaced the gap that decision 8 in §9 fixes. After that fix it's still technically reachable one way: a domain that logged *some* activity in a completed week — never enough to hit any quest's target, so no height accrued — and then went fully silent in the most recent `NEGLECT_WEEKS`. That's a domain with genuine (if unproductive) history that then lapsed, which is arguably still an honest thing for `crumbling` to say. See the open question in §9 about whether "neglected" should mean *zero logged activity* (current behavior) or *zero quests actually completed*, which is closer to spec §7's literal wording.
 
 **Provisional, and isolated on purpose:** the `thriving` rule is a stand-in. Spec §4 ties this notion to proximity to a *mastery threshold*, and Mastery Tree depth is deferred (spec §9). When it arrives, rule 3 is the only line that changes — see §7.
 
@@ -367,7 +369,14 @@ The first and last-reachable rows are the entire reason for this design. They mu
 `core/neglect.ts`, per your decision on fixed calendar weeks:
 
 ```
-isNeglected(domainId, state, today) →
+isNeglected(domainId, quests, logs, today) →
+  If the domain has no logs at all, or its earliest log is still
+  within the current in-progress week (no completed week has
+  passed since it started) → NOT neglected. There's no completed-
+  week history yet to judge — that isn't the same thing as
+  abandonment, even though both currently sum to zero contributions
+  in the completed-weeks window below.
+
   Take the last NEGLECT_WEEKS *completed* calendar weeks.
   (The current in-progress week is excluded — you can't be
    neglecting a week that hasn't finished.)
@@ -377,6 +386,8 @@ isNeglected(domainId, state, today) →
 ```
 
 Note this is scoped at domain level, not quest level, per spec §7. A single quest lapsing is not a trigger.
+
+**The "too new to judge" guard is load-bearing, not defensive extra.** Without it, logging into a brand-new domain today reads identically to a domain abandoned two weeks ago — both sum to zero in the completed-weeks window, since today's log falls in the excluded in-progress week. This guard lives here, inside `isNeglected`, rather than only at each call site, specifically so `findNeglectedDomains` (the neglect-prompt trigger) gets the same protection `deriveCondition`'s crumbling check gets, from one place. Found via real use (see §9, decision 8) — not caught by design review, which is exactly why it's called out this explicitly now.
 
 ---
 
@@ -743,12 +754,15 @@ These were open questions in the first draft. All are now settled. They are kept
 | 5 | Retired quests | Count toward **neglect** and **height** (past practice is still past practice); excluded from **`thriving`** credit (you can't be judged on a quest you retired). Asymmetry confirmed. | §3, both rules |
 | 6 | What makes a week count toward height | **≥1 quest in the domain met its target.** Not every quest — that is the `thriving` bar, and reusing it would stall height for multi-quest domains. | §3, height rule |
 | 7 | Does height ever decrease | **No — strictly monotonic.** All recency signal lives in `condition`. A height decrease is therefore always a bug, never tuning. | §3, height rule |
+| 8 | Bug: a domain touched for the first time today read as `crumbling` | **Fixed.** `isNeglected` excludes the current in-progress week from its sum (correctly), but had no floor requiring any completed week to exist first — so a domain with no history yet summed to zero for the same reason genuine abandonment does. Found via real use: two domains with identical (zero) completed-week history rendered as `steady` and `crumbling` respectively, depending only on whether either had ever been logged into during the current week. Guard now lives inside `isNeglected` itself. | `core/neglect.ts`, §3 Neglect rule |
 
 **Three constants are explicitly deferred for tuning after real use**, not left undecided by oversight: `TARGET_MET_RATIO`, `HEIGHT_TIER_THRESHOLDS`, and the day-window interpretation in decision 4. Each is a single named value in `core/rules.ts` or one function in `core/tally.ts`, so revisiting any of them is a one-line change. Per spec §11, real usage is what should validate or overturn them — not further design work now.
 
 ### Still genuinely open
 
 **The `thriving` rule is provisional.** Spec §4 ties this notion to proximity to a *mastery threshold*, and Mastery Tree depth is deferred (spec §9). The current rule is a stand-in that produces sensible behavior today, isolated to one branch of one function so that when Mastery Trees arrive, exactly one line changes. See §7.
+
+**Does "neglected" mean zero logged activity, or zero quests actually completed?** `isNeglected` currently sums raw `LogEntry.count` in the completed-weeks window — *any* logged effort, even far under target every time, counts as "not neglected." Spec §7's own wording is narrower: "zero contributing quests **completed** across two consecutive weekly planning cycles." Under the current code, a domain logged into weekly but never once hitting a target would never trigger the neglect prompt; under the spec's literal wording, it might should. Not changed as part of decision 8's fix — that was a clear bug with one obvious correct answer, this is a genuine design choice between two defensible readings, and conflating the two risks fixing a bug by accident redefining a rule nobody asked to redefine.
 
 ---
 

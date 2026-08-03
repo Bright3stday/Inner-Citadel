@@ -60,9 +60,12 @@ export function deriveCondition(
 ): SpireCondition {
   const domainQuests = domainQuestsOf(domain, quests)
 
-  // Guard: a domain with no history yet is not "crumbling" — there's
-  // nothing to have neglected. Without this, a brand-new domain trips
-  // rule 2 below on its first render.
+  // Fast path for zero logs, ever — genuinely a domain with no
+  // history is not "crumbling." This only covers that one case; the
+  // trickier one (logs exist, but none are old enough to have
+  // completed a week yet) is handled inside isNeglected() itself, so
+  // findNeglectedDomains gets the same protection without needing its
+  // own copy of it. See core/neglect.ts and docs/architecture.md §3.
   if (!domainHasAnyLog(domainQuests, logs)) return 'steady'
 
   if (isNeglected(domain.id, quests, logs, today)) return 'crumbling'

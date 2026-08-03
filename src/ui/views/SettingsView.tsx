@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { exportToFile, importFromFile } from '../../storage/transfer'
 import { replaceState } from '../../actions/transferActions'
+import * as storage from '../../storage/storage'
 import type { AppState } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -45,6 +46,19 @@ export function SettingsView({ state, apply }: Props) {
     }
   }
 
+  function handleReset() {
+    const confirmed = window.confirm(
+      'Reset clears everything in this browser — all domains, quests, and log history. ' +
+        "A copy of what you had is kept in a local backup, but there's no way to restore it " +
+        'from within the app yet. Export first if you want a safe copy. Continue?',
+    )
+    if (!confirmed) return
+
+    storage.saveBackup(state)
+    storage.clear()
+    location.reload()
+  }
+
   return (
     <div className="view settings-view">
       <h1>Settings</h1>
@@ -77,6 +91,18 @@ export function SettingsView({ state, apply }: Props) {
         />
         {error && <p className="settings-error">{error}</p>}
         {importedAt && !error && <p className="settings-success">Imported at {importedAt}.</p>}
+      </div>
+
+      <div className="settings-section">
+        <h2>Reset</h2>
+        <p className="settings-hint">
+          Clears everything stored in this browser and starts over empty. Useful on a new device,
+          or to get rid of old data you don't want. This does not undo — export first if you want
+          a copy.
+        </p>
+        <button type="button" onClick={handleReset}>
+          Reset data
+        </button>
       </div>
     </div>
   )

@@ -403,3 +403,97 @@ h1 {
   background: var(--fg);
   color: var(--bg);
 }
+
+.quest-import {
+  border: 2px solid var(--line);
+  background: var(--panel);
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.quest-import label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.quest-import textarea {
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  font-size: 0.8rem;
+  background: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+}
+
+.quest-import-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.quest-import-actions button {
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.quest-import-actions button:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.quest-import-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.quest-import-review {
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quest-import-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.quest-import-row input[type='checkbox'] {
+  margin-top: 0.2rem;
+}
+
+.quest-import-review > button {
+  align-self: flex-start;
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.quest-import-review > button:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.quest-import-review > button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

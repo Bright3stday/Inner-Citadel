@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { retireQuest } from '../../actions/questActions'
 import { archiveDomain } from '../../actions/domainActions'
 import { QuestEditorView } from './QuestEditorView'
+import { QuestImportView } from './QuestImportView'
 import type { AppState, Domain, DomainSpire } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -13,8 +14,10 @@ type Props = {
   onBack: () => void
 }
 
+type Mode = 'none' | 'add' | 'import'
+
 export function DomainView({ state, apply, domain, spire, onBack }: Props) {
-  const [showAddQuest, setShowAddQuest] = useState(false)
+  const [mode, setMode] = useState<Mode>('none')
   const quests = state.quests.filter((q) => q.domainId === domain.id && !q.retiredAt)
 
   function handleArchiveDomain() {
@@ -52,12 +55,21 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
         </div>
       ))}
 
-      {showAddQuest ? (
-        <QuestEditorView domain={domain} apply={apply} onDone={() => setShowAddQuest(false)} />
-      ) : (
-        <button type="button" onClick={() => setShowAddQuest(true)}>
-          + Add quest
-        </button>
+      {mode === 'add' && (
+        <QuestEditorView domain={domain} apply={apply} onDone={() => setMode('none')} />
+      )}
+      {mode === 'import' && (
+        <QuestImportView domain={domain} apply={apply} onDone={() => setMode('none')} />
+      )}
+      {mode === 'none' && (
+        <div className="quest-editor-actions">
+          <button type="button" onClick={() => setMode('add')}>
+            + Add quest
+          </button>
+          <button type="button" onClick={() => setMode('import')}>
+            + Import quest ideas
+          </button>
+        </div>
       )}
 
       <button type="button" className="danger-link" onClick={handleArchiveDomain}>

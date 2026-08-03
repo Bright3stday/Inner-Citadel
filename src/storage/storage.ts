@@ -30,11 +30,13 @@ export function save(state: AppState): void {
   localStorage.setItem(KEY, JSON.stringify(state))
 }
 
-/** True once anything has been saved. Lets callers (main.tsx) decide
- * whether to seed without touching localStorage directly — this file
- * stays the only module that does. */
-export function hasStoredState(): boolean {
-  return localStorage.getItem(KEY) !== null
+/**
+ * Wipes the main document. Used by Settings' Reset control. Does not
+ * touch the backup key — a reset stays recoverable the same way an
+ * import does.
+ */
+export function clear(): void {
+  localStorage.removeItem(KEY)
 }
 
 /**
