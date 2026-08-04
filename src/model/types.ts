@@ -92,3 +92,8 @@ export type QuestProgress = {
   target: number
   met: boolean
 }
+
+// A short-window, whole-app readout of recent momentum — separate from
+// spire height/condition on purpose, since those are weekly and barely
+// move day to day. Not tied to any one domain. See core/forge.ts.
+export type ForgeHeat = 'cold' | 'embers' | 'low-flame' | 'working-heat' | 'striking'

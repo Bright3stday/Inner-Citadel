@@ -68,11 +68,15 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
             <button type="button" onClick={() => setMode('add')}>
               + Add quest
             </button>
+            <CopyPromptButton />
             <button type="button" onClick={() => setMode('import')}>
               + Import quest ideas
             </button>
           </div>
-          <CopyPromptButton />
+          <p className="settings-hint">
+            "Copy quest prompt": paste into any capable AI, answer its questions there, then bring
+            the JSON it gives you back via "Import quest ideas."
+          </p>
         </>
       )}
 

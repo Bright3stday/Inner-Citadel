@@ -2,6 +2,7 @@ import { getDailyView, getNeglectPrompts } from '../../core/selectors'
 import { todayKey } from '../../core/dates'
 import { logContribution } from '../../actions/logActions'
 import { QuestRow } from '../components/QuestRow'
+import { Forge } from '../components/Forge'
 import type { AppState } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -22,6 +23,8 @@ export function DailyView({ state, apply }: Props) {
   return (
     <div className="view daily-view">
       <h1>Today</h1>
+
+      <Forge heat={daily.forgeHeat} />
 
       {neglected.length > 0 && (
         <div className="neglect-prompt">

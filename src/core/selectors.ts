@@ -1,12 +1,22 @@
-// Composes core/tally, core/spire, core/neglect, and core/dates into the
-// exact shapes each view renders. May only CALL those modules' exported
-// functions — never reimplement a rule. See docs/architecture.md §4.
+// Composes core/tally, core/spire, core/neglect, core/forge, and
+// core/dates into the exact shapes each view renders. May only CALL
+// those modules' exported functions — never reimplement a rule. See
+// docs/architecture.md §4.
 
 import { dayOfWeek, weekRange } from './dates'
 import { questProgress } from './tally'
 import { deriveSpire } from './spire'
 import { findNeglectedDomains } from './neglect'
-import type { AppState, DaySession, Domain, DomainSpire, Quest, QuestProgress } from '../model/types'
+import { deriveForgeHeat } from './forge'
+import type {
+  AppState,
+  DaySession,
+  Domain,
+  DomainSpire,
+  ForgeHeat,
+  Quest,
+  QuestProgress,
+} from '../model/types'
 
 export type DailyQuestView = {
   quest: Quest
@@ -24,6 +34,7 @@ export type DailyView = {
   date: string
   domainGroups: DailyDomainGroup[]
   session: DaySession | null
+  forgeHeat: ForgeHeat
 }
 
 // Grouped by domain so the Today view reads as distinct sections rather
@@ -50,8 +61,9 @@ export function getDailyView(state: AppState, today: string): DailyView {
     .filter((group) => group.quests.length > 0)
 
   const session = state.daySessions.find((s) => s.date === today) ?? null
+  const forgeHeat = deriveForgeHeat(state.logEntries, today)
 
-  return { date: today, domainGroups, session }
+  return { date: today, domainGroups, session, forgeHeat }
 }
 
 export type CitadelDomainView = {

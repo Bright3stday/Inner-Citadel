@@ -17,3 +17,12 @@ export const TARGET_MET_RATIO = 1.0
  *  A domain crosses into tier N once heightWeeks >= thresholds[N-1].
  *  Deferred for tuning after real use. */
 export const HEIGHT_TIER_THRESHOLDS = [1, 4, 12, 26, 52]
+
+/** How many trailing days (today inclusive) count toward forgeHeat.
+ *  A calibration guess, not a considered value — correct after real use. */
+export const FORGE_WINDOW_DAYS = 3
+
+/** Total LogEntry.count summed across the window, across ALL domains,
+ *  that bumps forgeHeat to the next of its 5 states. A calibration
+ *  guess, not a considered value — correct after real use. */
+export const FORGE_HEAT_THRESHOLDS = [1, 3, 6, 10]

@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { exportToFile, importFromFile } from '../../storage/transfer'
 import { replaceState } from '../../actions/transferActions'
 import * as storage from '../../storage/storage'
-import { CopyPromptButton } from '../components/CopyPromptButton'
 import type { AppState } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -92,11 +91,6 @@ export function SettingsView({ state, apply }: Props) {
         />
         {error && <p className="settings-error">{error}</p>}
         {importedAt && !error && <p className="settings-success">Imported at {importedAt}.</p>}
-      </div>
-
-      <div className="settings-section">
-        <h2>Quest generator</h2>
-        <CopyPromptButton />
       </div>
 
       <div className="settings-section">

@@ -14,14 +14,8 @@ export function CopyPromptButton() {
   }
 
   return (
-    <div className="copy-prompt">
-      <p className="settings-hint">
-        Copies a prompt for designing quests in one domain. Paste it into any capable AI, answer
-        its questions there, then bring the JSON it gives you back here via "Import quest ideas."
-      </p>
-      <button type="button" onClick={handleCopy}>
-        {copied ? 'Copied' : 'Copy quest prompt'}
-      </button>
-    </div>
+    <button type="button" onClick={handleCopy}>
+      {copied ? 'Copied' : 'Copy quest prompt'}
+    </button>
   )
 }
