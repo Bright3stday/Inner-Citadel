@@ -34,14 +34,19 @@ export function DailyView({ state, apply }: Props) {
         </div>
       )}
 
-      {daily.quests.length === 0 && <p className="empty">No quests yet.</p>}
+      {daily.domainGroups.length === 0 && <p className="empty">No quests yet.</p>}
 
-      {daily.quests.map((questView) => (
-        <QuestRow
-          key={questView.quest.id}
-          view={questView}
-          onLog={(methodId) => handleLog(questView.quest.id, methodId)}
-        />
+      {daily.domainGroups.map((group) => (
+        <section key={group.domainId} className="daily-domain-group">
+          <h2 className="daily-domain-header">{group.domainName}</h2>
+          {group.quests.map((questView) => (
+            <QuestRow
+              key={questView.quest.id}
+              view={questView}
+              onLog={(methodId) => handleLog(questView.quest.id, methodId)}
+            />
+          ))}
+        </section>
       ))}
     </div>
   )

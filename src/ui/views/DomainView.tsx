@@ -3,6 +3,7 @@ import { retireQuest } from '../../actions/questActions'
 import { archiveDomain } from '../../actions/domainActions'
 import { QuestEditorView } from './QuestEditorView'
 import { QuestImportView } from './QuestImportView'
+import { CopyPromptButton } from '../components/CopyPromptButton'
 import type { AppState, Domain, DomainSpire } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -62,14 +63,17 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
         <QuestImportView domain={domain} apply={apply} onDone={() => setMode('none')} />
       )}
       {mode === 'none' && (
-        <div className="quest-editor-actions">
-          <button type="button" onClick={() => setMode('add')}>
-            + Add quest
-          </button>
-          <button type="button" onClick={() => setMode('import')}>
-            + Import quest ideas
-          </button>
-        </div>
+        <>
+          <div className="quest-editor-actions">
+            <button type="button" onClick={() => setMode('add')}>
+              + Add quest
+            </button>
+            <button type="button" onClick={() => setMode('import')}>
+              + Import quest ideas
+            </button>
+          </div>
+          <CopyPromptButton />
+        </>
       )}
 
       <button type="button" className="danger-link" onClick={handleArchiveDomain}>

@@ -9,12 +9,11 @@ type Props = {
 // suggestedDays only ever dims this row's display — it never disables
 // the log buttons. Banking progress ahead of "due" is always allowed.
 export function QuestRow({ view, onLog }: Props) {
-  const { quest, domainName, progress, isDueToday } = view
+  const { quest, progress, isDueToday } = view
 
   return (
     <div className={`quest-row${isDueToday ? '' : ' quest-row-not-due'}`}>
       <div className="quest-row-header">
-        <span className="quest-domain">{domainName}</span>
         <span className="quest-title">{quest.title}</span>
       </div>
       <ProgressBar current={progress.current} target={progress.target} />

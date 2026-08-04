@@ -10,32 +10,48 @@ import type { AppState, DaySession, Domain, DomainSpire, Quest, QuestProgress } 
 
 export type DailyQuestView = {
   quest: Quest
-  domainName: string
   progress: QuestProgress
   isDueToday: boolean // display-only — never gates whether logging is allowed
 }
 
+export type DailyDomainGroup = {
+  domainId: string
+  domainName: string
+  quests: DailyQuestView[]
+}
+
 export type DailyView = {
   date: string
-  quests: DailyQuestView[]
+  domainGroups: DailyDomainGroup[]
   session: DaySession | null
 }
 
+// Grouped by domain so the Today view reads as distinct sections rather
+// than one undifferentiated wall of cards — but every quest still shows
+// without a tap-through, since logging is the one thing done every day
+// and a click-to-reveal would add friction to exactly that action.
 export function getDailyView(state: AppState, today: string): DailyView {
-  const domainNameById = new Map(state.domains.map((d) => [d.id, d.name]))
+  const activeQuests = state.quests.filter((quest) => !quest.retiredAt)
 
-  const quests = state.quests
-    .filter((quest) => !quest.retiredAt)
-    .map((quest) => ({
-      quest,
-      domainName: domainNameById.get(quest.domainId) ?? 'Unknown domain',
-      progress: questProgress(quest, state.logEntries, today),
-      isDueToday: quest.suggestedDays === null || quest.suggestedDays.includes(dayOfWeek(today)),
+  const domainGroups = state.domains
+    .filter((domain) => !domain.archivedAt)
+    .sort((a, b) => a.order - b.order)
+    .map((domain) => ({
+      domainId: domain.id,
+      domainName: domain.name,
+      quests: activeQuests
+        .filter((quest) => quest.domainId === domain.id)
+        .map((quest) => ({
+          quest,
+          progress: questProgress(quest, state.logEntries, today),
+          isDueToday: quest.suggestedDays === null || quest.suggestedDays.includes(dayOfWeek(today)),
+        })),
     }))
+    .filter((group) => group.quests.length > 0)
 
   const session = state.daySessions.find((s) => s.date === today) ?? null
 
-  return { date: today, quests, session }
+  return { date: today, domainGroups, session }
 }
 
 export type CitadelDomainView = {

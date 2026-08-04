@@ -113,15 +113,37 @@ h1 {
 
 .quest-row-header {
   display: flex;
-  justify-content: space-between;
+  gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--muted);
   margin-bottom: 0.25rem;
 }
 
+/* Always a single line, truncated with an ellipsis if it doesn't fit —
+   deterministic regardless of exact string width, rather than wrapping
+   arbitrarily depending on how a given title happens to measure. */
 .quest-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--fg);
   font-weight: bold;
+}
+
+.daily-domain-group {
+  margin-bottom: 1.25rem;
+}
+
+.daily-domain-header {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.3rem;
+  margin: 0 0 0.6rem;
 }
 
 .progress-bar {
@@ -369,6 +391,7 @@ h1 {
 
 .quest-editor input,
 .quest-editor select {
+  width: 100%;
   padding: 0.4rem;
   border: 1px solid var(--line);
   font-family: inherit;
@@ -383,6 +406,15 @@ h1 {
 
 .quest-editor-row label {
   flex: 1;
+  min-width: 0;
+}
+
+/* Below this, three side-by-side fields get uncomfortably narrow even
+   once they stop overflowing — stack them instead. */
+@media (max-width: 420px) {
+  .quest-editor-row {
+    flex-direction: column;
+  }
 }
 
 .quest-editor-actions {
@@ -496,4 +528,22 @@ h1 {
 .quest-import-review > button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.copy-prompt {
+  margin-top: 0.75rem;
+}
+
+.copy-prompt button {
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.copy-prompt button:hover {
+  background: var(--fg);
+  color: var(--bg);
 }
