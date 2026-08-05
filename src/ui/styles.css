@@ -249,20 +249,17 @@ h1 {
   text-align: center;
 }
 
-.spire-stack {
+.tower-stack {
+  position: relative;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: center;
-  gap: 2px;
   min-height: 60px;
+  /* Content grows from the bottom, so a short tier's foot still lands
+     on the same baseline as a tall tier's — .skyline's own
+     align-items: flex-end lines up every spire's box, but only this
+     keeps each one's actual foot (not just its box) on one line. */
   justify-content: flex-end;
-}
-
-.spire-block {
-  width: 60px;
-  height: 10px;
-  background: var(--fg);
-  border: 1px solid var(--line);
 }
 
 .spire-plot {
@@ -271,20 +268,114 @@ h1 {
   background: var(--muted);
 }
 
-.spire-thriving .spire-block {
-  background: var(--fg);
-  opacity: 1;
+/* One stone course. Same repeating-gradient-over-fill texture as the
+   Forge's structure, for visual consistency between the two "built
+   from stone" elements in the app. */
+.tower-segment {
+  position: relative;
+  width: 64px;
+  height: 20px;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(
+      var(--bg) 0px, var(--bg) 6px, var(--line) 6px, var(--line) 7px
+    ),
+    var(--muted);
+  background-blend-mode: overlay;
 }
 
-.spire-steady .spire-block {
-  background: var(--fg);
-  opacity: 0.7;
+.tower-slit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 12px;
+  background: #100c0a;
 }
 
-.spire-crumbling .spire-block {
-  background: var(--panel);
-  border-style: dashed;
-  opacity: 0.8;
+/* The one deliberate exception to the greyscale palette here — same
+   rule as the Forge's coal glow, and deliberately restrained the same
+   way: only the topmost window on a thriving tower, never every
+   window on the tower. */
+.tower-slit-lit {
+  background: var(--ember-bright);
+  box-shadow: 0 0 4px 1px var(--ember);
+}
+
+.tower-crack {
+  position: absolute;
+  top: 2px;
+  left: 20px;
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+  transform: rotate(18deg);
+  transform-origin: top center;
+}
+
+.tower-battlement {
+  position: relative;
+  width: 64px;
+  height: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.tower-merlon {
+  width: 12px;
+  height: 12px;
+  background: var(--fg);
+  border: 1px solid var(--line);
+  border-bottom: none;
+}
+
+/* Damage, not deletion — a broken merlon still reads as part of the
+   battlement, just knocked down, rather than a confusing gap. */
+.tower-merlon-broken {
+  height: 5px;
+}
+
+.tower-flag {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 16px;
+}
+
+.flag-pole {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  height: 16px;
+  background: var(--line);
+}
+
+.flag-pennant {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 10px;
+  height: 6px;
+  background: var(--ember);
+  clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+}
+
+.tower-rubble {
+  width: 3px;
+  height: 3px;
+  margin-top: 3px;
+  background: var(--line);
+  box-shadow:
+    9px 1px 0 var(--line),
+    -11px 0px 0 var(--line),
+    17px -1px 0 var(--line),
+    -19px 1px 0 var(--line);
 }
 
 .spire-name {
