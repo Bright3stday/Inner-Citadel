@@ -474,6 +474,31 @@ h1 {
   color: var(--bg);
 }
 
+.domain-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.domain-header-row h1 {
+  margin: 0;
+}
+
+.domain-header-row button {
+  padding: 0.35rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.domain-header-row button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
 .back-link,
 .danger-link {
   display: inline-block;

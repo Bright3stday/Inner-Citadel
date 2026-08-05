@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { retireQuest } from '../../actions/questActions'
-import { archiveDomain } from '../../actions/domainActions'
+import { archiveDomain, renameDomain } from '../../actions/domainActions'
 import { QuestEditorView } from './QuestEditorView'
 import { QuestImportView } from './QuestImportView'
 import { CopyPromptButton } from '../components/CopyPromptButton'
-import type { AppState, Domain, DomainSpire } from '../../model/types'
+import type { AppState, Domain, DomainSpire, Quest } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
 type Props = {
@@ -15,10 +15,13 @@ type Props = {
   onBack: () => void
 }
 
-type Mode = 'none' | 'add' | 'import'
+type Mode = 'none' | 'add' | 'edit' | 'import'
 
 export function DomainView({ state, apply, domain, spire, onBack }: Props) {
   const [mode, setMode] = useState<Mode>('none')
+  const [editingQuest, setEditingQuest] = useState<Quest | null>(null)
+  const [renamingDomain, setRenamingDomain] = useState(false)
+  const [domainNameDraft, setDomainNameDraft] = useState(domain.name)
   const quests = state.quests.filter((q) => q.domainId === domain.id && !q.retiredAt)
 
   function handleArchiveDomain() {
@@ -30,13 +33,56 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
     onBack()
   }
 
+  function handleStartEditQuest(quest: Quest) {
+    setEditingQuest(quest)
+    setMode('edit')
+  }
+
+  function handleDoneEditing() {
+    setEditingQuest(null)
+    setMode('none')
+  }
+
+  function handleStartRename() {
+    setDomainNameDraft(domain.name)
+    setRenamingDomain(true)
+  }
+
+  function handleSubmitRename(event: FormEvent) {
+    event.preventDefault()
+    if (!domainNameDraft.trim()) return
+    apply(renameDomain, { domainId: domain.id, name: domainNameDraft.trim() })
+    setRenamingDomain(false)
+  }
+
   return (
     <div className="view domain-view">
       <button type="button" className="back-link" onClick={onBack}>
         ← Citadel
       </button>
 
-      <h1>{domain.name}</h1>
+      {renamingDomain ? (
+        <form className="new-domain-form" onSubmit={handleSubmitRename}>
+          <input
+            type="text"
+            value={domainNameDraft}
+            onChange={(e) => setDomainNameDraft(e.target.value)}
+            autoFocus
+          />
+          <button type="submit">Save</button>
+          <button type="button" onClick={() => setRenamingDomain(false)}>
+            Cancel
+          </button>
+        </form>
+      ) : (
+        <div className="domain-header-row">
+          <h1>{domain.name}</h1>
+          <button type="button" onClick={handleStartRename}>
+            Rename
+          </button>
+        </div>
+      )}
+
       <p className="spire-meta">
         {spire.condition} · {spire.heightWeeks}w
       </p>
@@ -50,14 +96,20 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
           <p className="settings-hint">
             {quest.targetCount} {quest.unitLabel} / {quest.window}
           </p>
-          <button type="button" onClick={() => apply(retireQuest, { questId: quest.id })}>
-            Retire
-          </button>
+          <div className="quest-editor-actions">
+            <button type="button" onClick={() => handleStartEditQuest(quest)}>
+              Edit
+            </button>
+            <button type="button" onClick={() => apply(retireQuest, { questId: quest.id })}>
+              Retire
+            </button>
+          </div>
         </div>
       ))}
 
-      {mode === 'add' && (
-        <QuestEditorView domain={domain} apply={apply} onDone={() => setMode('none')} />
+      {mode === 'add' && <QuestEditorView domain={domain} apply={apply} onDone={() => setMode('none')} />}
+      {mode === 'edit' && editingQuest && (
+        <QuestEditorView domain={domain} apply={apply} quest={editingQuest} onDone={handleDoneEditing} />
       )}
       {mode === 'import' && (
         <QuestImportView domain={domain} apply={apply} onDone={() => setMode('none')} />

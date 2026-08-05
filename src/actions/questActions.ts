@@ -27,6 +27,37 @@ export function addQuest(
   return { ...state, quests: [...state.quests, quest] }
 }
 
+export function editQuest(
+  state: AppState,
+  payload: {
+    questId: string
+    title: string
+    targetCount: number
+    window: 'day' | 'week'
+    unitLabel: string
+    methodLabels: string[] // empty defaults to a single 'Logged' method
+  },
+): AppState {
+  const methods =
+    payload.methodLabels.length > 0 ? payload.methodLabels.map(newQuestMethod) : [newQuestMethod('Logged')]
+
+  return {
+    ...state,
+    quests: state.quests.map((quest) =>
+      quest.id === payload.questId
+        ? {
+            ...quest,
+            title: payload.title,
+            targetCount: payload.targetCount,
+            window: payload.window,
+            unitLabel: payload.unitLabel,
+            methods,
+          }
+        : quest,
+    ),
+  }
+}
+
 export function retireQuest(state: AppState, payload: { questId: string }): AppState {
   return {
     ...state,

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { getCitadelView } from '../../core/selectors'
 import { todayKey } from '../../core/dates'
 import { addDomain } from '../../actions/domainActions'
@@ -10,12 +10,21 @@ import type { Apply } from '../../state/useAppState'
 type Props = {
   state: AppState
   apply: Apply
+  active: boolean
 }
 
-export function CitadelView({ state, apply }: Props) {
+export function CitadelView({ state, apply, active }: Props) {
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null)
   const [newDomainName, setNewDomainName] = useState('')
   const citadel = getCitadelView(state, todayKey())
+
+  // The tab bar doesn't unmount this view when you navigate away (all panels
+  // stay mounted, see App.tsx), so a drilled-into domain would otherwise
+  // survive a round-trip through another tab. Reset to the skyline whenever
+  // the Citadel tab becomes active again.
+  useEffect(() => {
+    if (active) setSelectedDomainId(null)
+  }, [active])
 
   const selected = citadel.domains.find((d) => d.domain.id === selectedDomainId)
   if (selected) {

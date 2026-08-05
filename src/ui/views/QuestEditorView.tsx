@@ -1,23 +1,30 @@
 import { useState, type FormEvent } from 'react'
-import { addQuest } from '../../actions/questActions'
-import type { Domain } from '../../model/types'
+import { addQuest, editQuest } from '../../actions/questActions'
+import type { Domain, Quest } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
 type Props = {
   domain: Domain
   apply: Apply
   onDone: () => void
+  quest?: Quest // present → edit this quest; absent → add a new one
 }
 
-// Add only — no in-place editing yet. Retiring a miscalibrated quest and
-// adding its replacement is already the workflow spec §6 describes for
-// weekly planning, so this covers the case that matters first.
-export function QuestEditorView({ domain, apply, onDone }: Props) {
-  const [title, setTitle] = useState('')
-  const [targetCount, setTargetCount] = useState(3)
-  const [window, setWindow] = useState<'day' | 'week'>('week')
-  const [unitLabel, setUnitLabel] = useState('times')
-  const [methodLabels, setMethodLabels] = useState('')
+// Add and edit share one form — the fields are identical, only which
+// action fires on submit differs. Retiring a miscalibrated quest and
+// adding its replacement still works too (spec §6's weekly-planning
+// workflow), this just covers the case where you want to fix a target
+// or add a method without losing the quest's log history.
+export function QuestEditorView({ domain, apply, onDone, quest }: Props) {
+  const isEditing = quest !== undefined
+
+  const [title, setTitle] = useState(quest?.title ?? '')
+  const [targetCount, setTargetCount] = useState(quest?.targetCount ?? 3)
+  const [window, setWindow] = useState<'day' | 'week'>(quest?.window ?? 'week')
+  const [unitLabel, setUnitLabel] = useState(quest?.unitLabel ?? 'times')
+  const [methodLabels, setMethodLabels] = useState(
+    quest ? quest.methods.map((m) => m.label).join(', ') : '',
+  )
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -28,14 +35,25 @@ export function QuestEditorView({ domain, apply, onDone }: Props) {
       .map((label) => label.trim())
       .filter(Boolean)
 
-    apply(addQuest, {
-      domainId: domain.id,
-      title: title.trim(),
-      targetCount,
-      window,
-      unitLabel: unitLabel.trim() || 'times',
-      methodLabels: methods,
-    })
+    if (isEditing) {
+      apply(editQuest, {
+        questId: quest.id,
+        title: title.trim(),
+        targetCount,
+        window,
+        unitLabel: unitLabel.trim() || 'times',
+        methodLabels: methods,
+      })
+    } else {
+      apply(addQuest, {
+        domainId: domain.id,
+        title: title.trim(),
+        targetCount,
+        window,
+        unitLabel: unitLabel.trim() || 'times',
+        methodLabels: methods,
+      })
+    }
     onDone()
   }
 
@@ -91,7 +109,7 @@ export function QuestEditorView({ domain, apply, onDone }: Props) {
       </label>
 
       <div className="quest-editor-actions">
-        <button type="submit">Add quest</button>
+        <button type="submit">{isEditing ? 'Save changes' : 'Add quest'}</button>
         <button type="button" onClick={onDone}>
           Cancel
         </button>

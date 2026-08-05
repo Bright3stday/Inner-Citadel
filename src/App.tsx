@@ -51,7 +51,7 @@ export function App() {
           <DailyView state={state} apply={apply} />
         </section>
         <section className="panel panel-citadel">
-          <CitadelView state={state} apply={apply} />
+          <CitadelView state={state} apply={apply} active={tab === 'citadel'} />
         </section>
         <section className="panel panel-settings">
           <SettingsView state={state} apply={apply} />

@@ -6,6 +6,15 @@ export function addDomain(state: AppState, payload: { name: string }): AppState 
   return { ...state, domains: [...state.domains, domain] }
 }
 
+export function renameDomain(state: AppState, payload: { domainId: string; name: string }): AppState {
+  return {
+    ...state,
+    domains: state.domains.map((domain) =>
+      domain.id === payload.domainId ? { ...domain, name: payload.name } : domain,
+    ),
+  }
+}
+
 export function archiveDomain(state: AppState, payload: { domainId: string }): AppState {
   return {
     ...state,
