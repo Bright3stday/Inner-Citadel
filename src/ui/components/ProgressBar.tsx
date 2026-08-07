@@ -10,6 +10,10 @@ export function ProgressBar({ current, target, pulse = 'none' }: Props) {
 
   return (
     <div
+      // Keyed by `current` (real progress, not a synthetic counter) so
+      // the pulse animation reliably restarts on every tap, even taps
+      // faster than the previous animation's duration.
+      key={current}
       className={`progress-bar${pulseClass}`}
       role="progressbar"
       aria-valuenow={current}

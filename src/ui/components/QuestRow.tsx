@@ -9,8 +9,8 @@ type Props = {
 
 type PulseState = 'none' | 'normal' | 'target'
 
-const NORMAL_PULSE_MS = 400
-const TARGET_PULSE_MS = 800
+const NORMAL_PULSE_MS = 450
+const TARGET_PULSE_MS = 900
 const TAP_NOTE_MS = 1800
 
 function vibrate(pattern: number | number[]) {
@@ -75,6 +75,13 @@ export function QuestRow({ view, onLog }: Props) {
 
   return (
     <div className={`quest-row${isDueToday ? '' : ' quest-row-not-due'}`}>
+      {pulse !== 'none' && (
+        // Keyed by progress.current so a tap faster than the previous
+        // animation's duration still restarts it — same reasoning as
+        // ProgressBar's own key.
+        <div key={`ring-${progress.current}`} className={`quest-row-ring quest-row-ring-${pulse}`} />
+      )}
+      {pulse === 'target' && <div key={`flash-${progress.current}`} className="quest-row-flash" />}
       <div className="quest-row-header">
         <span className="quest-title">{quest.title}</span>
       </div>
