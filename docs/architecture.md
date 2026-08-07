@@ -88,6 +88,7 @@ type AppState = {
   logEntries: LogEntry[]
   daySessions: DaySession[]
   dismissedPrompts: DismissedPrompt[]
+  weeklyIntents: WeeklyIntent[]   // §7's weekly ritual — a stated intent per week, added post-launch
   settings: Settings
   meta: {
     createdAt: string            // ISO 8601
@@ -697,8 +698,10 @@ Because `logEntries` is the append-only source of truth and no derived value is 
 **Sentinel Mode** (spec §9, §10)
 Requires native Android APIs, so it arrives with a Capacitor shell wrapping this same PWA. Architecturally it is a *new source of data*, not a change to existing flows — a `sentinel/` module producing its own entity type, kept out of `logEntries` since it isn't a quest contribution. The relevant protection today is that `storage.ts` is the single `localStorage` boundary: if the native shell needs a different persistence backend, one module changes and nothing above it notices.
 
-**Formal weekly planning ritual UI** (spec §9)
-A new view over existing data. Because weeks are computed by `core/dates.ts` rather than stored as entities, adding a weekly review screen needs no data model change at all.
+**Formal weekly planning ritual UI** (spec §9) — built
+`ui/views/WeeklyReviewView.tsx`, reachable via its own "Review" tab. Reviews the most recently *completed* week (`core/dates.ts` → `lastCompletedWeeks`, same boundary as neglect and height — never the in-progress week) via `core/selectors.ts` → `getWeeklyReviewView`, which composes `questMetInWeek` and `deriveSpire` per domain. No data model change was needed for the review half, confirming the note above.
+The "set an intent for the week ahead" half needed one new stored array: `weeklyIntents: WeeklyIntent[]` on `AppState` (`{ weekKey, note, createdAt }`, upserted by `actions/weeklyIntentActions.setWeeklyIntent`). This is a choice, not a fact derivable from log history — same reasoning as `DaySession.reflection` in §2.4.
+*Deferred, not built:* letting the user pick a day/time to be *reminded* of this ritual (Notification API + service-worker-scheduled trigger). The Review tab itself is the fallback for that — always reachable manually, not gated behind a notification firing — which is also why it shipped as a permanent tab rather than a modal only a notification would open. Revisit scheduled reminders once there's a reason to trust their reliability on the target devices (iOS Safari PWA background notification support is limited).
 
 **AI Quest Generator** (spec §9)
 Scoped by the spec as a scaffolding tool for *authoring* quests, not a content engine — which keeps it entirely outside the runtime data flow. It would sit beside `ui/views/QuestEditorView.tsx` as a suggestion source: produce draft `Quest` objects via `model/factories.ts`, show them for editing, and hand the accepted one to `actions/questActions.addQuest()` like any hand-typed quest. Nothing in `core/` or `storage/` changes, and no new entity type is needed — a generated quest is just a quest.

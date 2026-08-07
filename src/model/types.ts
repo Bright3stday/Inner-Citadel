@@ -9,6 +9,7 @@ export type AppState = {
   logEntries: LogEntry[]
   daySessions: DaySession[]
   dismissedPrompts: DismissedPrompt[]
+  weeklyIntents: WeeklyIntent[]
   settings: Settings
   meta: {
     createdAt: string // ISO 8601
@@ -66,6 +67,15 @@ export type DismissedPrompt = {
   domainId: string
   weekKey: string // "2026-W31"
   dismissedAt: string
+}
+
+// A weekly ritual's stated intent for the week ahead — a choice, not a
+// fact derivable from log history, so it's stored (same reasoning as
+// DaySession.reflection). One entry per weekKey; setting again overwrites.
+export type WeeklyIntent = {
+  weekKey: string // "2026-W31" — the week this intent is FOR
+  note: string
+  createdAt: string
 }
 
 export type Settings = {

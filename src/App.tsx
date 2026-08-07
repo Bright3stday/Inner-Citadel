@@ -3,8 +3,9 @@ import { useAppState } from './state/useAppState'
 import { DailyView } from './ui/views/DailyView'
 import { CitadelView } from './ui/views/CitadelView'
 import { SettingsView } from './ui/views/SettingsView'
+import { WeeklyReviewView } from './ui/views/WeeklyReviewView'
 
-type Tab = 'daily' | 'citadel' | 'settings'
+type Tab = 'daily' | 'citadel' | 'review' | 'settings'
 
 // Holds the state hook and decides which view is on screen.
 // Routing only — no rules belong here.
@@ -39,6 +40,13 @@ export function App() {
         </button>
         <button
           type="button"
+          className={tab === 'review' ? 'tab-active' : ''}
+          onClick={() => setTab('review')}
+        >
+          Review
+        </button>
+        <button
+          type="button"
           className={tab === 'settings' ? 'tab-active' : ''}
           onClick={() => setTab('settings')}
         >
@@ -52,6 +60,9 @@ export function App() {
         </section>
         <section className="panel panel-citadel">
           <CitadelView state={state} apply={apply} active={tab === 'citadel'} />
+        </section>
+        <section className="panel panel-review">
+          <WeeklyReviewView state={state} apply={apply} />
         </section>
         <section className="panel panel-settings">
           <SettingsView state={state} apply={apply} />

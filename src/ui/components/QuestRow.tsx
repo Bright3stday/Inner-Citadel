@@ -11,6 +11,7 @@ type PulseState = 'none' | 'normal' | 'target'
 
 const NORMAL_PULSE_MS = 400
 const TARGET_PULSE_MS = 800
+const TAP_NOTE_MS = 1800
 
 function vibrate(pattern: number | number[]) {
   if ('vibrate' in navigator) {
@@ -18,11 +19,27 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
+function ordinal(n: number): string {
+  const mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`
+  switch (n % 10) {
+    case 1:
+      return `${n}st`
+    case 2:
+      return `${n}nd`
+    case 3:
+      return `${n}rd`
+    default:
+      return `${n}th`
+  }
+}
+
 // suggestedDays only ever dims this row's display — it never disables
 // the log buttons. Banking progress ahead of "due" is always allowed.
 export function QuestRow({ view, onLog }: Props) {
-  const { quest, progress, isDueToday } = view
+  const { quest, progress, isDueToday, logsToday } = view
   const [pulse, setPulse] = useState<PulseState>('none')
+  const [tapNote, setTapNote] = useState<string | null>(null)
   const wasMetRef = useRef(progress.met)
 
   // Fires exactly once, at the moment this quest's target is actually
@@ -48,6 +65,12 @@ export function QuestRow({ view, onLog }: Props) {
     setTimeout(() => {
       setPulse((current) => (current === 'normal' ? 'none' : current))
     }, NORMAL_PULSE_MS)
+
+    // A real, changing fact about this specific tap rather than a fixed
+    // "logged!" — the same acknowledgment every time is what read as a
+    // checkbox tick in UAT. logsToday reflects the count BEFORE this tap.
+    setTapNote(`${ordinal(logsToday + 1)} today`)
+    setTimeout(() => setTapNote(null), TAP_NOTE_MS)
   }
 
   return (
@@ -63,6 +86,7 @@ export function QuestRow({ view, onLog }: Props) {
           </button>
         ))}
       </div>
+      <p className="quest-tap-note">{tapNote}</p>
     </div>
   )
 }

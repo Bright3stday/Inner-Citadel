@@ -40,27 +40,28 @@ body {
 
 .app[data-tab='daily'] .panel-daily,
 .app[data-tab='citadel'] .panel-citadel,
+.app[data-tab='review'] .panel-review,
 .app[data-tab='settings'] .panel-settings {
   display: block;
 }
 
 /* Wide: Daily and Citadel sit side by side regardless of tab — same
-   components, more room. Settings still takes the full view when
-   selected, so the split is suppressed while data-tab is 'settings'. */
+   components, more room. Review and Settings still take the full view
+   when selected, so the split is suppressed for those two tabs. */
 @media (min-width: 900px) {
   .app {
     max-width: 960px;
   }
 
-  .app:not([data-tab='settings']) .main {
+  .app:not([data-tab='settings']):not([data-tab='review']) .main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     align-items: start;
   }
 
-  .app:not([data-tab='settings']) .panel-daily,
-  .app:not([data-tab='settings']) .panel-citadel {
+  .app:not([data-tab='settings']):not([data-tab='review']) .panel-daily,
+  .app:not([data-tab='settings']):not([data-tab='review']) .panel-citadel {
     display: block;
   }
 }
@@ -201,6 +202,26 @@ h1 {
   font-size: 0.7rem;
   mix-blend-mode: difference;
   color: white;
+}
+
+/* The number itself moves when it changes, rather than the whole bar
+   simply repainting — the tap's effect is on this digit, so the digit
+   is what animates. Re-keyed by value in ProgressBar.tsx to restart. */
+@keyframes value-roll {
+  0% { transform: translateY(-40%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.progress-bar-value {
+  display: inline-block;
+  animation: value-roll 220ms ease-out;
+}
+
+.quest-tap-note {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin: 0.3rem 0 0;
+  height: 1em;
 }
 
 .quest-methods {
@@ -434,6 +455,90 @@ h1 {
   color: var(--muted);
   font-size: 0.8rem;
   margin-top: 0.6rem;
+}
+
+.weekly-review-past {
+  margin-bottom: 1.5rem;
+}
+
+.weekly-review-range {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+}
+
+.weekly-review-past-intent {
+  font-size: 0.85rem;
+  font-style: italic;
+  border-left: 3px solid var(--line);
+  padding-left: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.weekly-review-domain {
+  border: 2px solid var(--line);
+  background: var(--panel);
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.weekly-review-domain-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.weekly-review-quest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.weekly-review-quest-list li {
+  padding: 0.2rem 0;
+}
+
+.weekly-review-marker {
+  display: inline-block;
+  width: 1em;
+}
+
+.weekly-review-unmet {
+  color: var(--muted);
+}
+
+.weekly-review-plan h2 {
+  font-size: 0.9rem;
+  margin: 0 0 0.4rem;
+}
+
+.weekly-review-intent-input {
+  width: 100%;
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  font-size: 0.8rem;
+  background: var(--panel);
+  color: var(--fg);
+  resize: vertical;
+  margin-bottom: 0.5rem;
+}
+
+.weekly-review-plan button {
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.weekly-review-plan button:hover {
+  background: var(--fg);
+  color: var(--bg);
 }
 
 .spire-button {

@@ -17,7 +17,10 @@ export function ProgressBar({ current, target, pulse = 'none' }: Props) {
     >
       <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
       <span className="progress-bar-label">
-        {current} / {target}
+        <span key={current} className="progress-bar-value">
+          {current}
+        </span>{' '}
+        / {target}
       </span>
     </div>
   )

@@ -16,6 +16,7 @@ export function emptyAppState(): AppState {
     logEntries: [],
     daySessions: [],
     dismissedPrompts: [],
+    weeklyIntents: [],
     settings: {
       reflectionCharLimit: 500,
       weekStartsOn: 1,
