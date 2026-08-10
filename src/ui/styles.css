@@ -644,19 +644,153 @@ h1 {
   padding: 0.05rem 0.3rem;
 }
 
-.inn-records {
-  margin: 1rem 0;
+/* The Inn facade — a small tavern front on the Citadel screen itself,
+   below the skyline, rather than a button buried in a domain's own
+   page. Same "modular pieces, not one bespoke illustration" approach
+   as Forge/Spire: a stepped-triangle thatched roof with a chimney
+   (same pixel-stair technique as the battlements), post-and-beam
+   timber framing on the body, and a hanging signboard. Still strictly
+   greyscale — texture and line weight carry the "wood" read, not
+   color, same rule as everywhere else. */
+.inn-facade {
+  margin-top: 2rem;
 }
 
-.inn-records h2 {
-  font-size: 0.9rem;
+.inn-facade-roof {
+  position: relative;
+  height: 36px;
+  background: repeating-linear-gradient(135deg, var(--line) 0 3px, var(--panel) 3px 8px);
+  border: 2px solid var(--line);
+  border-bottom: none;
+  clip-path: polygon(
+    0% 100%, 0% 80%, 8% 80%, 8% 60%, 16% 60%, 16% 40%, 24% 40%, 24% 20%, 32% 20%, 32% 0%,
+    68% 0%, 68% 20%, 76% 20%, 76% 40%, 84% 40%, 84% 60%, 92% 60%, 92% 80%, 100% 80%, 100% 100%
+  );
+}
+
+.inn-facade-chimney {
+  position: absolute;
+  bottom: 100%;
+  right: 18%;
+  width: 10px;
+  height: 16px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-bottom: none;
+}
+
+.inn-facade-body {
+  position: relative;
+  border: 2px solid var(--line);
+  border-top: none;
+  background: var(--panel);
+  padding: 1.8rem 0.75rem 0.75rem;
+  overflow: hidden;
+}
+
+/* Vertical posts (repeating pattern) plus one horizontal beam —
+   post-and-beam framing, not a decorative X. Low opacity so it reads
+   as structure behind the wooden signs, not noise competing with them. */
+.inn-facade-timber {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px 44px);
+  opacity: 0.12;
+}
+
+.inn-facade-timber::after {
+  content: '';
+  position: absolute;
+  top: 42%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--line);
+}
+
+.inn-hanging-sign {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  margin: 0.2rem auto 1.2rem;
+  padding: 0.3rem 0.9rem;
+  background: repeating-linear-gradient(0deg, var(--bg) 0 5px, color-mix(in srgb, var(--muted) 40%, var(--bg)) 5px 6px);
+  border: 2px solid var(--line);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  text-align: center;
+  transform: rotate(-1.5deg);
+}
+
+.inn-hanging-sign::before,
+.inn-hanging-sign::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+}
+
+.inn-hanging-sign::before {
+  left: 18%;
+}
+
+.inn-hanging-sign::after {
+  right: 18%;
+}
+
+.inn-facade-content {
+  position: relative;
+  z-index: 1;
+}
+
+.inn-facade-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.wooden-sign {
+  position: relative;
+  border: 3px solid var(--line);
+  background: repeating-linear-gradient(0deg, var(--bg) 0 5px, color-mix(in srgb, var(--muted) 30%, var(--bg)) 5px 6px);
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+.wooden-sign-title {
+  font-weight: bold;
+  margin: 0 0 0.2rem;
+  font-size: 0.85rem;
+}
+
+.wooden-sign-detail {
+  font-size: 0.75rem;
+  color: var(--muted);
   margin: 0 0 0.4rem;
 }
 
-.inn-record {
-  border: 2px dashed var(--line);
-  padding: 0.6rem;
-  margin-bottom: 0.6rem;
+.wooden-sign-button {
+  padding: 0.45rem 0.8rem;
+  background: repeating-linear-gradient(0deg, var(--bg) 0 4px, color-mix(in srgb, var(--muted) 30%, var(--bg)) 4px 5px);
+  border: 2px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.wooden-sign-button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.inn-domain-picks {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .inn-quest-picker {

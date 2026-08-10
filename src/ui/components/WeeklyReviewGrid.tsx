@@ -62,12 +62,7 @@ export function WeeklyReviewGrid({ review }: Props) {
         {formatRange(review.week.startKey, review.week.endKey)} · {review.metCount} of{' '}
         {review.totalCount} quests met target
       </p>
-      <p className="settings-hint">
-        Under each quest: that day's count. Daily-target quests: bold = met, muted italic = under,
-        underlined = over. Weekly-target quests show a plain daily count (the target is for the
-        whole week, so there's no single day to judge). A dot means the quest was resting or reduced
-        at the Inn that day — not counted as a miss.
-      </p>
+      <p className="settings-hint">Daily counts: bold met, italic under, underlined over, dot rested.</p>
 
       {review.pastIntent && (
         <p className="weekly-review-past-intent">Your intent that week: "{review.pastIntent}"</p>

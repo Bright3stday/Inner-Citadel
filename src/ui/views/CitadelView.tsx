@@ -4,6 +4,7 @@ import { todayKey } from '../../core/dates'
 import { addDomain } from '../../actions/domainActions'
 import { Spire } from '../components/Spire'
 import { DomainView } from './DomainView'
+import { InnFacade } from './InnFacade'
 import type { AppState } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -73,6 +74,8 @@ export function CitadelView({ state, apply, active }: Props) {
         />
         <button type="submit">+ Add domain</button>
       </form>
+
+      <InnFacade state={state} apply={apply} />
     </div>
   )
 }

@@ -57,11 +57,7 @@ export function TrendsView({ state, today }: Props) {
   return (
     <section className="trends-view">
       <h2>Monthly, last {MONTHLY_LOOKBACK} months</h2>
-      <p className="settings-hint">
-        Periods hitting target out of periods judged, per quest — e.g. "18/23" means 18 of 23 judged
-        periods (days for a daily quest, weeks for a weekly quest) met or exceeded target that month.
-        Bold: mostly on track. Muted italic: mostly short — worth recalibrating or retiring.
-      </p>
+      <p className="settings-hint">Hits / judged periods per month. Bold on track, italic mostly short.</p>
 
       {domains.map((domain) => {
         const quests = state.quests.filter((q) => q.domainId === domain.id && !q.retiredAt)

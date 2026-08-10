@@ -68,10 +68,7 @@ export function WeeklyReviewView({ state, apply }: Props) {
 
           <section className="weekly-review-plan">
             <h2>Plan the week ahead</h2>
-            <p className="settings-hint">
-              Optional. A short note to yourself — what matters this week, what to adjust. Quest
-              targets and domains themselves are edited from the Citadel tab.
-            </p>
+            <p className="settings-hint">Optional note to yourself.</p>
             <textarea
               className="weekly-review-intent-input"
               value={intentDraft}

@@ -209,11 +209,11 @@ export function getQuestMonthlyBreakdown(
   return questMonthlyBreakdown(quest, state.logEntries, today, months, state.restRecords)
 }
 
-// A domain's currently-open Inn stays (not yet returned from) — used
-// by DomainView to show what's reduced/resting right now and offer a
-// Return action per stay.
-export function getActiveRestRecords(state: AppState, domainId: string) {
-  return state.restRecords.filter((r) => r.domainId === domainId && r.endedAt === null)
+// Every currently-open Inn stay, across all domains — the Inn now
+// lives on the Citadel screen itself rather than per-domain, so this
+// is no longer scoped to one domain's page.
+export function getAllActiveRestRecords(state: AppState) {
+  return state.restRecords.filter((r) => r.endedAt === null)
 }
 
 // A quest's most recent log entries, all-time — used by DomainView's

@@ -81,9 +81,7 @@ export function InnView({ domain, quests, apply, onDone }: Props) {
         </button>
       </div>
       <p className="settings-hint">
-        {mode === 'reduced'
-          ? "Same quests, smaller targets. Meeting the reduced target counts as meeting target — it's the real target for as long as this lasts."
-          : 'Paused entirely, dropped from Today. Optionally add a recovery quest set in their place, which counts as real practice for this domain while it runs.'}
+        {mode === 'reduced' ? 'Same quests, smaller targets, for now.' : 'Paused, dropped from Today.'}
       </p>
 
       <fieldset className="inn-quest-picker">
