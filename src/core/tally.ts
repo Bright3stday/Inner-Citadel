@@ -1,5 +1,5 @@
 import { TARGET_MET_RATIO } from './rules'
-import { weekRange, isWithinRange, daysInRange, type WeekRange } from './dates'
+import { addDays, weekRange, isWithinRange, daysInRange, lastCompletedWeeks, lastMonths, type WeekRange } from './dates'
 import type { LogEntry, Quest, QuestProgress } from '../model/types'
 
 /**
@@ -22,6 +22,15 @@ export function questProgress(quest: Quest, logs: LogEntry[], today: string): Qu
     target: quest.targetCount,
     met: current >= quest.targetCount * TARGET_MET_RATIO,
   }
+}
+
+/** The days within `week` this quest actually existed and isn't in the future. */
+function applicableDaysInWeek(quest: Quest, week: WeekRange, today: string): string[] {
+  const createdDate = quest.createdAt.slice(0, 10)
+  const retiredDate = quest.retiredAt?.slice(0, 10) ?? null
+  return daysInRange(week).filter(
+    (day) => day <= today && day >= createdDate && (retiredDate === null || day <= retiredDate),
+  )
 }
 
 /**
@@ -53,11 +62,142 @@ export function questMetInWeek(
     return weekTotal >= quest.targetCount * TARGET_MET_RATIO
   }
 
-  const createdDate = quest.createdAt.slice(0, 10)
-  const retiredDate = quest.retiredAt?.slice(0, 10) ?? null
-  const applicableDays = daysInRange(week).filter(
-    (day) => day <= today && day >= createdDate && (retiredDate === null || day <= retiredDate),
-  )
+  const applicableDays = applicableDaysInWeek(quest, week, today)
   if (applicableDays.length === 0) return false
   return applicableDays.every((day) => dayTotal(day) >= quest.targetCount * TARGET_MET_RATIO)
+}
+
+/**
+ * The actual counted quantity behind `questMetInWeek`, for display —
+ * doesn't redefine "met", just exposes the real numbers so a 0/3 week
+ * and a 2/3 week don't look identical. Week-window: the week's raw
+ * total against the target. Day-window: summed across the days the
+ * quest was actually active that week, against target × that many
+ * days, so a 3×/day quest active 5 of 7 days reads as "x / 15" rather
+ * than a misleading fixed weekly number.
+ */
+export function questWeekTally(
+  quest: Quest,
+  logs: LogEntry[],
+  week: WeekRange,
+  today: string,
+): { current: number; target: number } {
+  if (quest.window === 'week') {
+    const current = logs
+      .filter((log) => log.questId === quest.id && isWithinRange(log.forDate, week))
+      .reduce((sum, log) => sum + log.count, 0)
+    return { current, target: quest.targetCount }
+  }
+
+  const applicableDays = applicableDaysInWeek(quest, week, today)
+  const current = logs
+    .filter((log) => log.questId === quest.id && applicableDays.includes(log.forDate))
+    .reduce((sum, log) => sum + log.count, 0)
+  return { current, target: quest.targetCount * applicableDays.length }
+}
+
+export type DayLevel = 'under' | 'met' | 'over'
+
+/** Plain three-way split against a real target — not the same thing as
+ * `met` (which uses TARGET_MET_RATIO for a binary yes/no). This is
+ * purely for showing whether a period ran short, landed on, or
+ * exceeded its target, so under/over don't collapse into one bucket. */
+function classifyCount(count: number, target: number): DayLevel {
+  if (count < target) return 'under'
+  if (count > target) return 'over'
+  return 'met'
+}
+
+export type QuestDay = {
+  day: string
+  count: number
+  // Real per-day target only exists for day-window quests — a
+  // week-window quest's target applies to the whole week, so there's
+  // nothing honest to compare a single day's count against. Rather
+  // than invent a synthetic daily share, those days carry a raw count
+  // and no level; the week's own current/target (questWeekTally) is
+  // the real signal for those.
+  level: DayLevel | null
+}
+
+/** Day-by-day counts across `week`, for a per-quest daily grid. */
+export function questDayBreakdown(
+  quest: Quest,
+  logs: LogEntry[],
+  week: WeekRange,
+  today: string,
+): QuestDay[] {
+  const createdDate = quest.createdAt.slice(0, 10)
+  const retiredDate = quest.retiredAt?.slice(0, 10) ?? null
+
+  return daysInRange(week).map((day) => {
+    const count = logs
+      .filter((log) => log.questId === quest.id && log.forDate === day)
+      .reduce((sum, log) => sum + log.count, 0)
+
+    if (quest.window === 'week') {
+      return { day, count, level: null }
+    }
+
+    const applicable = day <= today && day >= createdDate && (retiredDate === null || day <= retiredDate)
+    return { day, count, level: applicable ? classifyCount(count, quest.targetCount) : null }
+  })
+}
+
+export type QuestMonth = {
+  monthLabel: string // "2026-07"
+  under: number
+  met: number
+  over: number
+  total: number // under + met + over — judged periods that month
+}
+
+/**
+ * Per-month under/met/over tallies, for spotting a quest that's
+ * chronically short (recalibrate or retire), chronically over
+ * (increase the target, or it's basically mastered), or genuinely on
+ * track. Week-window quests are judged per completed week (reusing
+ * questWeekTally); day-window quests are judged per applicable day —
+ * each period compared against its own real target, never a synthetic
+ * one.
+ */
+export function questMonthlyBreakdown(quest: Quest, logs: LogEntry[], today: string, months: number): QuestMonth[] {
+  const buckets = new Map<string, { under: number; met: number; over: number }>()
+  const bump = (monthLabel: string, level: DayLevel) => {
+    const bucket = buckets.get(monthLabel) ?? { under: 0, met: 0, over: 0 }
+    bucket[level] += 1
+    buckets.set(monthLabel, bucket)
+  }
+
+  const createdDate = quest.createdAt.slice(0, 10)
+  const retiredDate = quest.retiredAt?.slice(0, 10) ?? null
+
+  if (quest.window === 'week') {
+    for (const week of lastCompletedWeeks(today, months * 5)) {
+      if (createdDate > week.endKey) continue
+      if (retiredDate !== null && retiredDate < week.startKey) continue
+      const { current, target } = questWeekTally(quest, logs, week, today)
+      bump(week.endKey.slice(0, 7), classifyCount(current, target))
+    }
+  } else {
+    let cursor = addDays(today, -months * 31)
+    while (cursor <= today) {
+      if (cursor >= createdDate && (retiredDate === null || cursor <= retiredDate)) {
+        const count = logs
+          .filter((log) => log.questId === quest.id && log.forDate === cursor)
+          .reduce((sum, log) => sum + log.count, 0)
+        bump(cursor.slice(0, 7), classifyCount(count, quest.targetCount))
+      }
+      cursor = addDays(cursor, 1)
+    }
+  }
+
+  // Always one point per calendar month, even when a month has no
+  // judged periods (before the quest existed, or genuinely no data) —
+  // a fixed set of columns so every quest's row lines up the same way
+  // regardless of how much history that particular quest has.
+  return lastMonths(today, months).map((monthLabel) => {
+    const b = buckets.get(monthLabel) ?? { under: 0, met: 0, over: 0 }
+    return { monthLabel, ...b, total: b.under + b.met + b.over }
+  })
 }

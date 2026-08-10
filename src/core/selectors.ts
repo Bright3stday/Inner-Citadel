@@ -3,8 +3,16 @@
 // those modules' exported functions — never reimplement a rule. See
 // docs/architecture.md §4.
 
-import { dayOfWeek, lastCompletedWeeks, weekRange, type WeekRange } from './dates'
-import { questProgress, questMetInWeek } from './tally'
+import { dayOfWeek, isWithinRange, lastCompletedWeeks, lastMonths, weekRange, type WeekRange } from './dates'
+import {
+  questProgress,
+  questMetInWeek,
+  questWeekTally,
+  questDayBreakdown,
+  questMonthlyBreakdown,
+  type QuestDay,
+  type QuestMonth,
+} from './tally'
 import { deriveSpire } from './spire'
 import { findNeglectedDomains } from './neglect'
 import { deriveForgeHeat } from './forge'
@@ -14,6 +22,7 @@ import type {
   Domain,
   DomainSpire,
   ForgeHeat,
+  LogEntry,
   Quest,
   QuestProgress,
 } from '../model/types'
@@ -107,6 +116,10 @@ export function getNeglectPrompts(state: AppState, today: string): Domain[] {
 export type WeeklyReviewQuest = {
   quest: Quest
   met: boolean
+  current: number // real counted quantity for `week` — see core/tally.ts questWeekTally
+  target: number
+  entries: LogEntry[] // this quest's contributing log entries within `week`, most recent first
+  days: QuestDay[] // day-by-day counts across `week`, Mon-Sun — see core/tally.ts questDayBreakdown
 }
 
 export type WeeklyReviewDomain = {
@@ -122,16 +135,17 @@ export type WeeklyReview = {
   metCount: number
   totalCount: number
   pastIntent: string | null // what was set, at the time, as the intent FOR `week`
-  upcomingWeekKey: string
-  upcomingIntent: string | null // already-saved intent for the week now in progress
 }
 
-// The most recently COMPLETED week (never the in-progress one — same
-// boundary as the neglect rule and spire height, so "this week's spire
-// hasn't moved yet" and "review isn't showing this week" agree).
-export function getWeeklyReviewView(state: AppState, today: string): WeeklyReview {
-  const week = lastCompletedWeeks(today, 1)[0]
-
+// Reviews `week` (default: the most recently COMPLETED week — never the
+// in-progress one, same boundary as the neglect rule and spire height).
+// Callers passing an explicit `week` (e.g. the Trends pager) can review
+// any earlier completed week the same way.
+export function getWeeklyReviewView(
+  state: AppState,
+  today: string,
+  week: WeekRange = lastCompletedWeeks(today, 1)[0],
+): WeeklyReview {
   const domains = state.domains
     .filter((d) => !d.archivedAt && d.createdAt.slice(0, 10) <= week.endKey)
     .sort((a, b) => a.order - b.order)
@@ -140,19 +154,26 @@ export function getWeeklyReviewView(state: AppState, today: string): WeeklyRevie
       spire: deriveSpire(domain, state.quests, state.logEntries, today),
       quests: state.quests
         .filter((q) => q.domainId === domain.id && q.createdAt.slice(0, 10) <= week.endKey)
-        .map((quest) => ({
-          quest,
-          met: questMetInWeek(quest, state.logEntries, week, today),
-        })),
+        .map((quest) => {
+          const { current, target } = questWeekTally(quest, state.logEntries, week, today)
+          const entries = state.logEntries
+            .filter((log) => log.questId === quest.id && isWithinRange(log.forDate, week))
+            .sort((a, b) => (a.forDate === b.forDate ? b.loggedAt.localeCompare(a.loggedAt) : b.forDate.localeCompare(a.forDate)))
+          return {
+            quest,
+            met: questMetInWeek(quest, state.logEntries, week, today),
+            current,
+            target,
+            entries,
+            days: questDayBreakdown(quest, state.logEntries, week, today),
+          }
+        }),
     }))
     .filter((group) => group.quests.length > 0)
 
   const allQuests = domains.flatMap((d) => d.quests)
   const metCount = allQuests.filter((q) => q.met).length
-
-  const upcomingWeekKey = weekRange(today).weekKey
   const pastIntent = state.weeklyIntents.find((i) => i.weekKey === week.weekKey)?.note ?? null
-  const upcomingIntent = state.weeklyIntents.find((i) => i.weekKey === upcomingWeekKey)?.note ?? null
 
   return {
     week,
@@ -161,7 +182,34 @@ export function getWeeklyReviewView(state: AppState, today: string): WeeklyRevie
     metCount,
     totalCount: allQuests.length,
     pastIntent,
-    upcomingWeekKey,
-    upcomingIntent,
   }
+}
+
+// Column headers for a monthly table — fixed and independent of any
+// quest's own data, so every row lines up under the same months.
+export function getRecentMonths(today: string, months: number): string[] {
+  return lastMonths(today, months)
+}
+
+// A quest's under/met/over tallies per month, for spotting a quest
+// that's chronically short (recalibrate or retire), chronically over
+// (raise the target, or it's basically mastered), or genuinely on
+// track — the actual diagnostic signal behind "is this quest working."
+export function getQuestMonthlyBreakdown(
+  state: AppState,
+  quest: Quest,
+  today: string,
+  months: number,
+): QuestMonth[] {
+  return questMonthlyBreakdown(quest, state.logEntries, today, months)
+}
+
+// A quest's most recent log entries, all-time — used by DomainView's
+// per-quest history, capped since a quest can accumulate a lot of
+// entries over months of real use.
+export function getQuestLogHistory(state: AppState, questId: string, limit = 20): LogEntry[] {
+  return state.logEntries
+    .filter((log) => log.questId === questId)
+    .sort((a, b) => (a.forDate === b.forDate ? b.loggedAt.localeCompare(a.loggedAt) : b.forDate.localeCompare(a.forDate)))
+    .slice(0, limit)
 }

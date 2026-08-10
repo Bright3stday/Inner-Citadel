@@ -550,7 +550,7 @@ h1 {
 }
 
 .weekly-review-quest-list li {
-  padding: 0.2rem 0;
+  padding: 0.1rem 0;
 }
 
 .weekly-review-marker {
@@ -560,6 +560,191 @@ h1 {
 
 .weekly-review-unmet {
   color: var(--muted);
+}
+
+.weekly-review-quest-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.3rem 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.weekly-review-quest-toggle .quest-title {
+  font-weight: normal;
+  flex: 1;
+}
+
+.weekly-review-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.weekly-review-entries {
+  padding: 0 0 0.5rem 1.4rem;
+}
+
+.weekly-review-mode-toggle,
+.weekly-review-pager {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.weekly-review-mode-toggle button,
+.weekly-review-pager button {
+  flex: 1;
+  padding: 0.5rem;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.weekly-review-mode-toggle button.tab-active {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.weekly-review-pager button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.log-entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.log-entry-list li {
+  padding: 0.1rem 0;
+}
+
+.log-entry-list-empty {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0.2rem 0;
+}
+
+.quest-history {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.trends-view h2 {
+  font-size: 0.9rem;
+  margin: 0 0 0.2rem;
+}
+
+.trends-domain-block {
+  margin-top: 1.25rem;
+}
+
+.trends-domain-block h3 {
+  font-size: 0.85rem;
+  margin: 0 0 0.4rem;
+}
+
+.trend-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+}
+
+.trend-table {
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.trend-table th,
+.trend-table td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.trend-table th {
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.trend-domain-name {
+  text-align: left;
+  font-weight: bold;
+}
+
+/* Met-rate for the month, not a domain condition — good/mixed/struggling
+   rather than thriving/steady/crumbling, so the two ideas don't blur. */
+.trend-cell-good {
+  color: var(--fg);
+  font-weight: bold;
+}
+
+.trend-cell-mixed {
+  color: var(--fg);
+}
+
+.trend-cell-struggling {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.trend-cell-plain {
+  color: var(--muted);
+}
+
+.quest-day-grid {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.2rem 0 0.4rem;
+}
+
+.quest-day-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.2rem 0;
+  border: 1px solid var(--line);
+  font-size: 0.65rem;
+}
+
+.quest-day-label {
+  color: var(--muted);
+}
+
+.quest-day-under {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.quest-day-met {
+  color: var(--fg);
+  font-weight: bold;
+}
+
+.quest-day-over {
+  color: var(--fg);
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.quest-day-plain {
+  color: var(--fg);
 }
 
 .weekly-review-plan h2 {

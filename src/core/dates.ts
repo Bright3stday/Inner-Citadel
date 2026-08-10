@@ -65,6 +65,25 @@ export function weekRange(key: string): WeekRange {
 }
 
 /**
+ * The last `n` calendar month labels ("YYYY-MM"), oldest first, ending
+ * with the month containing `today`. Independent of any quest/log
+ * data — used so a monthly table's column headers are fixed and every
+ * row lines up under them, regardless of how much history each row's
+ * own quest happens to have.
+ */
+export function lastMonths(today: string, n: number): string[] {
+  const [y, m] = today.split('-').map(Number)
+  const labels: string[] = []
+  for (let i = n - 1; i >= 0; i--) {
+    const total = y * 12 + (m - 1) - i
+    const yy = Math.floor(total / 12)
+    const mm = (total % 12) + 1
+    labels.push(`${yy}-${String(mm).padStart(2, '0')}`)
+  }
+  return labels
+}
+
+/**
  * The `n` most recently COMPLETED weeks, excluding the current
  * in-progress week. Most recent first.
  */

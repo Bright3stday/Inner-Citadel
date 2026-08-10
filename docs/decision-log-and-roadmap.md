@@ -1,0 +1,107 @@
+# Inner Citadel — Decision Log & Roadmap
+*Supersedes the original MLP Design Specification (`docs/inner-citadel-mlp-spec.md`, kept as a historical snapshot). That doc was a snapshot; this one is meant to stay current — update it as things change rather than letting it drift again.*
+
+---
+
+# Part 1 — Decision Log
+
+Organized by theme, showing what was decided, what it replaced, and why — so a later "why does it work this way?" has an answer instead of needing to be re-derived.
+
+## Identity & aesthetic
+- **Name:** RPGify Habits → **Inner Citadel** (Marcus Aurelius / Pierre Hadot). Driven by dropping the RPG-stat framing — the new name needed to match a system built around real domains and Stoic practice, not character stats.
+- **Visual style:** 8-bit pixel art retained, but RPG-vibrant colour dropped for black-and-white/greyscale — calming and reflective rather than game-like.
+
+## Domains & attributes
+- **Six abstract JRPG stats** (Strength, Magic, Vitality, Spirit, Speed, Luck) → **real domains as their own structures** (Fitness, Reading, Photography, Knowledge, etc.), each shaped like a branch of a Civilization-style tech tree. The translation layer between a real activity and an abstract stat added no value and was dropped entirely.
+
+## Progress signal (the biggest revision)
+- **RAG colour indicator** (per attribute) → **retired**, replaced by a domain's own visual state doing that job.
+- First pass: a **spire per domain**, three mutually-exclusive states (scaffolding / completed / crumbling), decaying straight back to bare scaffolding on a lapse.
+- After live testing exposed a real flaw (a built-then-lapsed domain looked identical to one never touched at all), **refined into two derived values**: persistent **height** (cumulative historical depth, never resets) and **condition** (recent trend — thriving/holding/crumbling). A lapsed domain now shows tall but visibly weathering, not reset to nothing. Both values remain fully derived from log data, never stored — consistent with the architecture's core rule.
+- Deeper node-level proximity still lives inside a domain's own expanded view, not on the citadel skyline.
+- **Spire pixel-art rendering — built.** A modular Castlevania-esque stone tower (CSS-composed pieces + a per-tier/per-condition recipe, not one bespoke sprite per combination), replacing the earlier text status line ("Crumbling · 0w"). One deliberate, narrowly-scoped palette exception: a warm window-glow on a thriving tower's top, alongside the Forge's coal glow (below) — both justified as "signs of life," not meant to spread further.
+
+## The quest model (the second-biggest revision)
+- Original 3-way split (quick daily routine ticks / substitutable weekly pool / flexible-reflective quests) **collapsed into one primitive**: target quantity + time window (day or week) + one or more logging methods. All three original cases turned out to be the same primitive at different window sizes and method counts — a genuine Occam's razor simplification, not a loss of capability.
+- Quests should be **activity-framed, not count-framed** ("go for an evening walk," not "10,000 steps") to avoid the proxy-metric gaming risk observed directly in a comparable step-tracking app.
+- **Substitution** (e.g. push-ups or squats both count toward one strength target) applies only where instances naturally support it — not manufactured for domains that don't have a natural equivalent.
+- **Cadence slower than weekly** (e.g. biweekly cooking): the quest generator always reframes this via methods spanning the full activity plus a lighter touch-point, so an "off" week under a real slower rhythm still has something legitimate to log — rather than silently approximating into a weekly target that can never be satisfied.
+- Quests stay visible every day regardless of due status; logging early or extra always just adds to the window's running total.
+- No native step-counting or other functionality that dedicated apps already do well — manual logging only.
+- **Quest editing and domain rename — built.** The original build only supported add + retire (quests) and add + archive (domains), discovered as a real gap in Day 2 UAT ("I can't edit quests or domains after adding them"). Both now support true in-place editing — target, window, unit, methods for a quest; name for a domain — without losing log history, via one shared add/edit form (`QuestEditorView`) rather than a second parallel form.
+- **Incidental fix found alongside it:** navigating away from a drilled-into domain via the top-level tab bar (not the "← Citadel" link) stranded you there instead of returning to the skyline, because the responsive layout keeps all panels mounted at once and only toggles visibility via CSS — so the drilled-in state never reset on its own. Fixed by resetting to the skyline whenever the Citadel tab becomes active again.
+
+## Mastery, Growth Points, Inn
+- **Mastery Tree depth** (node dependencies, self-authored thresholds beyond a domain skeleton) — still deferred past the MLP.
+- **Growth Points:** originally a flat weekly resource → **event-triggered** (earned on level-up, node unlock, achievement, or streak; spent whenever conditions are met), closer to skill-point economies in games like Spider-Man or Tomb Raider. Node cost/scarcity design still needs real decisions before this gets built — research flagged a real hoarding risk if costs aren't differentiated.
+- **Inn / recovery:** the full active-hub concept (à la Hades — a recovery moment should trigger something, not just sit passively) is deferred. The one piece already included in the MLP is the **2-week reflection trigger**: if a domain/goal has zero contributing quests across two consecutive weekly planning cycles, that becomes a prompt to reconsider the goal or its difficulty — not a punishment.
+
+## Weekly ritual & historical trends
+- **Formal weekly-planning ritual UI — built.** Originally deferred ("informal weekly check-in is enough for now"), revisited once real use raised it directly: a Review tab reviews the most recently completed week per domain/quest and lets you set an optional intent for the week ahead. The intent is the one new piece of stored state this needed (`weeklyIntents`), justified the same way `DaySession.reflection` was — a choice, not something derivable from log history.
+- **No scheduled day/time reminder yet.** UAT asked for a way to pick when to be nudged into the ritual; that needs the Notification API plus service-worker-scheduled triggers, and iOS Safari's background notification support is unreliable enough that building the *screen* first and treating scheduling as separate follow-up work was the deliberate call. The Review tab is the permanent fallback for that, not a placeholder for it — always reachable manually, not gated behind a notification firing.
+- **Quest breakdown visibility — built.** The weekly review originally showed only a met/unmet marker per quest, which discarded the information needed to trust the summary (a 0/3 week and a 2/3 week looked identical). Each quest now shows its real counted quantity for that week and expands to its underlying log entries (date, method, count) — exposing data that already existed, not new data modeling.
+- **Historical/trend views — built, first version, revised once already.** Modeled on Strava's "Fitness and Freshness" approach: a neutral, detailed mirror of your own history rather than streaks or social comparison, consistent with Inner Citadel's no-streak, no-social stance. First pass anchored at the domain level (weekly/monthly tables of a domain's height/condition over time, reusing `deriveSpire` fed a past date). UAT found this wasn't the actual ask — the number shown was a cumulative running total, not legible as a per-period result, and more importantly the real need was quest-level, not domain-level: which specific days a quest was under/on/over target, to inform whether that quest needs recalibrating or can be retired. Rebuilt around that: the weekly review (both "This Week" and, fed an earlier week, the Trends pager) now shows a 7-day grid under every quest — day-window quests get a real under/met/over per day (bold = met, muted italic = under, underlined = over); week-window quests show a plain daily count only, since there's no real per-day target to judge against and inventing a synthetic one was explicitly rejected. Trends also adds a monthly rollup per quest ("18/23" = 18 of 23 judged periods hit or exceeded target that month), scoped per domain. All of it still fully derived — the day/month classification is a new pure function in `core/tally.ts`, nothing stored. Per-quest log-entry history (the raw date/method/count list) stays in `DomainView`'s own expandable "History," matching the existing Citadel → domain → quests navigation; the day/month grids aggregate a quest's methods together rather than splitting by method, since methods are interchangeable toward the same target by design.
+
+## Daily engagement gap (found through real use, not theory)
+- Confirmed from actually living in the app for a day: nothing visibly changes between opens except at week's end, when a spire's condition updates. Two fixes decided, both scoped to the interaction layer only, touching nothing in the weekly/derive logic:
+  - **Log-time feedback — built, and revised twice on real UAT.** First pass: a subtle pulse (visual) plus haptic feedback (Android via the Vibration API; not available on iOS Safari or desktop, so this degrades gracefully). Modeled on Persona's social-stat-gain feel, deliberately restrained rather than typical "juice" intensity. UAT found this landed as *no animation at all* — too subtle to register even with haptic confirming the tap worked. Revised: the progress fill now animates with real motion (a springy overshoot as it fills, since the fill's own width already represents genuine progress, not decoration), a ring expands from the whole row rather than just the thin bar, and hitting a target specifically gets a distinctly bigger moment — a full black/white invert flash, reserved for that one genuinely different event rather than applied to every tap. Still strictly greyscale; the flash inverts, it doesn't introduce colour.
+  - **Sound — not pursued.** Day 3 real use found the phone stays on silent as a matter of habit regardless of design, which structurally undermines an audio channel; haptic doesn't share that limitation (direct-tap vibration isn't gated by the same silent toggle that mutes sound) and was confirmed actually firing correctly. Multi-sensory feedback stayed to visual + haptic rather than chasing a third channel with a known dead end.
+  - **The Forge:** a separate, small animated sprite on the Today view, driven by its **own derived daily-activity signal** (a short rolling window, not the weekly data) — because reading from weekly data would reproduce the exact "nothing changes daily" problem it exists to fix. Modeled on Pokémon's egg-check readout and Walking Charlie's activity-driven avatar, without carrying over either's literal imagery — a forge (cold ash → embers → flame → working heat → hammer strike) fits the citadel theme and, unlike a creature, going cold implies no guilt. UAT confirmed it still works well as the "state of practice on open" signal even after its novelty as a *log-time* reward faded — which is exactly why log-time feedback (above) was given its own, different signal rather than reusing the Forge's animation.
+- **Today view structure — resolved.** Quests are grouped under visible domain headers without requiring a tap-through, per the original recommendation — preserves low-friction daily logging while fixing the "wall of cards" feel that showed up as the quest list grew.
+
+## Onboarding
+- Deferred in build order, but deliberately not treated as a non-issue — even as the sole user, a symbolic first-run moment marking the start of the practice is wanted, and it's the natural home for the identity/future-self mechanic (Peterson's self-authoring — the person being built toward, and the one being avoided) to get its first concrete UI moment rather than staying pure philosophy.
+
+## AI Quest Generator
+- Scoped from the start as a **scaffolding tool**, not a content engine — helps author quests, doesn't generate an app's worth of content unsupervised.
+- Evolved substantially through real testing across three models (Gemini Flash, free ChatGPT, Gemini Pro): moved from a fill-in-the-blanks prompt to a full **interview → reasoning summary → JSON** flow, so calibration happens through conversation and the person gets to object before anything is generated.
+- Rules added directly from real failures, not speculation: default conservative under uncertain/dormant self-assessment; always reframe slower-than-weekly cadences instead of silently approximating; treat a known "abandons it once it starts working" pattern as its own trigger for a lighter target.
+- **Decision:** the prompt should live inside the app with a copy-to-clipboard button (Settings, and/or near "Add quest" on a domain page) rather than being an external document to find and paste manually. Still no AI calls from within the app itself — this stays copy-paste, by design. **Built** — a `CopyPromptButton` sits on each domain's quest list.
+
+## Platform & storage
+- Entire MLP is buildable as a pure offline-first PWA. **Sentinel Mode** (doomscrolling detection) is the only feature that structurally requires the Android APK, since it needs OS-level Usage Stats/Accessibility access a browser sandbox can't reach — everything else stays PWA-only.
+- Steps and similar sensor data are **not** auto-logged — no native pedometer/Health Connect access from a PWA, and deliberately not duplicated even if it were possible.
+- Storage: `localStorage` is sufficient for realistic data volume (low hundreds of KB even after years of daily logging) — isolated behind a single storage module so a swap to `IndexedDB` (via a thin wrapper like `idb-keyval`) stays cheap if it's ever needed, without touching the rest of the app.
+- Cross-device (PC + phone), without needing live sync: on desktop, the File System Access API can point directly at a file inside an already-synced cloud folder (Dropbox/Drive), with the OS's own client handling the actual sync invisibly — no backend, no network code in the app. On mobile, manual export/import remains the practical approach.
+- Explicitly rejected: a hosted backend (Vercel/Supabase or similar) — solves scaling and multi-user problems this project doesn't have, and directly fights the offline-first requirement.
+
+## Development approach
+- **New project**, not a rework of the original prototype — the old codebase's black-box problem is a symptom of undocumented accumulated structure, and very little of the original conceptual model survived this design process anyway.
+- Architecture-first: a system architecture document was produced and reviewed before any implementation code, with an explicit debug map, a "derive, don't store" rule, and a standing requirement that nothing gets committed or pushed without review.
+- Either Anwar or Claude Code can write any given piece — enforced by keeping business logic in plain, testable functions outside the UI framework layer.
+
+---
+
+# Part 2 — Roadmap
+
+## Done
+- Architecture doc (React + TypeScript + Vite, single `localStorage` JSON document, derive-don't-store), reviewed and approved with the height/condition spire refinement folded in.
+- Core quest primitive, logging UI (Today view), and domain management (Citadel view, Add Quest form).
+- Spire model — height + condition, replacing RAG.
+- 2-week neglect/reflection trigger.
+- Export/Import (Settings).
+- AI Quest Generator prompt — interview → reasoning → JSON flow, tested and refined across three models and multiple real domains (Cooking, Sleep); in-app copy-to-clipboard shipped.
+- Day 1 UAT bugs: domain-label wrapping inconsistency (Today view), Add Quest form's Target/Per/Unit row overflow.
+- Today view domain grouping — quests grouped under visible domain headers, no tap-through required.
+- Log-time feedback (visual pulse + haptic), revised for visibility after UAT — see Decision Log.
+- The Forge (daily-activity-derived sprite).
+- Spire pixel-art rendering — modular Castlevania-esque tower, height tiers + condition states.
+- Quest editing (in-place, not just add + retire) and domain rename — see Decision Log.
+- Formal weekly-planning ritual UI — a Review tab (This Week + optional intent for the week ahead) — see Decision Log.
+- Quest breakdown visibility — real per-quest counts and expandable log entries in the weekly review, not just a met/unmet marker.
+- Historical/trend views (first version) — Trends toggle on the Review tab: a week pager showing a 7-day under/met/over grid per quest, a 6-month monthly rollup per quest, and per-quest log history nested in DomainView.
+
+## In progress / ready for Claude Code now
+- **Feature: week-boundary setting.** The design has always used "week" as a quest/spire unit without ever pinning down which day/time it actually starts or ends. Needs a Settings option (day + optional time); `Settings.weekStartsOn` already exists in the data model but has no UI control yet. Can also double as the trigger for a scheduled weekly-ritual reminder once that's built (see below).
+- **Feature: scheduled day/time reminder for the weekly ritual.** Explicitly deferred pending the Notification API + service-worker scheduling, and a known reliability gap on iOS Safari PWAs. The Review tab is the permanent fallback for this, not a stopgap — see Decision Log.
+
+## Next up
+- Onboarding + feature guide, likely built as one combined first-run experience rather than two separate things.
+- Keep this document current going forward — it was written specifically to stop drifting out of sync the way the original spec did.
+
+## Deferred (explicitly out of MLP scope, revisit later)
+- Mastery Tree depth (node dependencies, self-authored thresholds).
+- Growth Points — needs node cost/scarcity design work before it's buildable.
+- Full Inn recovery hub (active, Hades-style — beyond the 2-week trigger already included).
+- Sentinel Mode (Android APK only).
+- Remaining research batches (Management, Strategy) — tied to Growth Points, not urgent until that's actually being built.

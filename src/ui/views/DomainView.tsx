@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { retireQuest } from '../../actions/questActions'
 import { archiveDomain, renameDomain } from '../../actions/domainActions'
+import { getQuestLogHistory } from '../../core/selectors'
 import { QuestEditorView } from './QuestEditorView'
 import { QuestImportView } from './QuestImportView'
 import { CopyPromptButton } from '../components/CopyPromptButton'
+import { LogEntryList } from '../components/LogEntryList'
 import type { AppState, Domain, DomainSpire, Quest } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -22,6 +24,7 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null)
   const [renamingDomain, setRenamingDomain] = useState(false)
   const [domainNameDraft, setDomainNameDraft] = useState(domain.name)
+  const [historyQuestId, setHistoryQuestId] = useState<string | null>(null)
   const quests = state.quests.filter((q) => q.domainId === domain.id && !q.retiredAt)
 
   function handleArchiveDomain() {
@@ -103,7 +106,18 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
             <button type="button" onClick={() => apply(retireQuest, { questId: quest.id })}>
               Retire
             </button>
+            <button
+              type="button"
+              onClick={() => setHistoryQuestId((id) => (id === quest.id ? null : quest.id))}
+            >
+              {historyQuestId === quest.id ? 'Hide history' : 'History'}
+            </button>
           </div>
+          {historyQuestId === quest.id && (
+            <div className="quest-history">
+              <LogEntryList quest={quest} entries={getQuestLogHistory(state, quest.id)} />
+            </div>
+          )}
         </div>
       ))}
 

@@ -1,6 +1,8 @@
 # Inner Citadel — MLP Design Specification
 *(formerly RPGify Habits — rebrand reflects a shift away from RPG-stat framing toward Stoic, practice-based capability building)*
 
+> **Superseded.** This document is a snapshot of the original design pass and is kept for history, not maintained. For current decisions and roadmap status, see [`decision-log-and-roadmap.md`](./decision-log-and-roadmap.md).
+
 ---
 
 ## 1. Name & Framing
