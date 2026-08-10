@@ -1,6 +1,28 @@
 import { TARGET_MET_RATIO } from './rules'
 import { addDays, weekRange, isWithinRange, daysInRange, lastCompletedWeeks, lastMonths, type WeekRange } from './dates'
-import type { LogEntry, Quest, QuestProgress } from '../model/types'
+import type { LogEntry, Quest, QuestProgress, RestRecord } from '../model/types'
+
+/**
+ * Did any Inn stay (reduced or resting — treated the same for trend
+ * display purposes) cover this quest during [rangeStart, rangeEnd]?
+ * Used so a rested stretch shows as rested rather than as a miss —
+ * see docs/decision-log-and-roadmap.md, Inn section. Reduced and
+ * resting aren't distinguished here: a still-open stay's effective end
+ * is treated as "now" via the caller passing today as rangeEnd's ceiling.
+ */
+function wasQuestRestedInRange(
+  quest: Quest,
+  rangeStart: string,
+  rangeEnd: string,
+  restRecords: RestRecord[],
+): boolean {
+  return restRecords.some((record) => {
+    if (!record.questIds.includes(quest.id)) return false
+    const recordStart = record.startedAt.slice(0, 10)
+    const recordEnd = record.endedAt?.slice(0, 10) ?? '9999-12-31'
+    return rangeStart <= recordEnd && rangeEnd >= recordStart
+  })
+}
 
 /**
  * A quest's progress within its CURRENT window (today, or the week
@@ -96,7 +118,7 @@ export function questWeekTally(
   return { current, target: quest.targetCount * applicableDays.length }
 }
 
-export type DayLevel = 'under' | 'met' | 'over'
+export type DayLevel = 'under' | 'met' | 'over' | 'rested'
 
 /** Plain three-way split against a real target — not the same thing as
  * `met` (which uses TARGET_MET_RATIO for a binary yes/no). This is
@@ -116,7 +138,9 @@ export type QuestDay = {
   // nothing honest to compare a single day's count against. Rather
   // than invent a synthetic daily share, those days carry a raw count
   // and no level; the week's own current/target (questWeekTally) is
-  // the real signal for those.
+  // the real signal for those. 'rested' overrides either case: a day
+  // covered by an Inn stay isn't a real attempt, so it's never shown
+  // as a miss.
   level: DayLevel | null
 }
 
@@ -126,6 +150,7 @@ export function questDayBreakdown(
   logs: LogEntry[],
   week: WeekRange,
   today: string,
+  restRecords: RestRecord[] = [],
 ): QuestDay[] {
   const createdDate = quest.createdAt.slice(0, 10)
   const retiredDate = quest.retiredAt?.slice(0, 10) ?? null
@@ -134,6 +159,10 @@ export function questDayBreakdown(
     const count = logs
       .filter((log) => log.questId === quest.id && log.forDate === day)
       .reduce((sum, log) => sum + log.count, 0)
+
+    if (wasQuestRestedInRange(quest, day, day, restRecords)) {
+      return { day, count, level: 'rested' as const }
+    }
 
     if (quest.window === 'week') {
       return { day, count, level: null }
@@ -159,11 +188,20 @@ export type QuestMonth = {
  * track. Week-window quests are judged per completed week (reusing
  * questWeekTally); day-window quests are judged per applicable day —
  * each period compared against its own real target, never a synthetic
- * one.
+ * one. Periods covered by an Inn stay are excluded entirely (not
+ * counted as under, not counted as met) — a rested stretch shouldn't
+ * drag down or inflate the "is this quest working" signal either way.
  */
-export function questMonthlyBreakdown(quest: Quest, logs: LogEntry[], today: string, months: number): QuestMonth[] {
+export function questMonthlyBreakdown(
+  quest: Quest,
+  logs: LogEntry[],
+  today: string,
+  months: number,
+  restRecords: RestRecord[] = [],
+): QuestMonth[] {
   const buckets = new Map<string, { under: number; met: number; over: number }>()
   const bump = (monthLabel: string, level: DayLevel) => {
+    if (level === 'rested') return
     const bucket = buckets.get(monthLabel) ?? { under: 0, met: 0, over: 0 }
     bucket[level] += 1
     buckets.set(monthLabel, bucket)
@@ -176,6 +214,7 @@ export function questMonthlyBreakdown(quest: Quest, logs: LogEntry[], today: str
     for (const week of lastCompletedWeeks(today, months * 5)) {
       if (createdDate > week.endKey) continue
       if (retiredDate !== null && retiredDate < week.startKey) continue
+      if (wasQuestRestedInRange(quest, week.startKey, week.endKey, restRecords)) continue
       const { current, target } = questWeekTally(quest, logs, week, today)
       bump(week.endKey.slice(0, 7), classifyCount(current, target))
     }
@@ -183,10 +222,12 @@ export function questMonthlyBreakdown(quest: Quest, logs: LogEntry[], today: str
     let cursor = addDays(today, -months * 31)
     while (cursor <= today) {
       if (cursor >= createdDate && (retiredDate === null || cursor <= retiredDate)) {
-        const count = logs
-          .filter((log) => log.questId === quest.id && log.forDate === cursor)
-          .reduce((sum, log) => sum + log.count, 0)
-        bump(cursor.slice(0, 7), classifyCount(count, quest.targetCount))
+        if (!wasQuestRestedInRange(quest, cursor, cursor, restRecords)) {
+          const count = logs
+            .filter((log) => log.questId === quest.id && log.forDate === cursor)
+            .reduce((sum, log) => sum + log.count, 0)
+          bump(cursor.slice(0, 7), classifyCount(count, quest.targetCount))
+        }
       }
       cursor = addDays(cursor, 1)
     }

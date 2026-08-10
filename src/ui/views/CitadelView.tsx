@@ -52,14 +52,14 @@ export function CitadelView({ state, apply, active }: Props) {
 
       {citadel.domains.length === 0 && <p className="empty">No domains yet.</p>}
       <div className="skyline">
-        {citadel.domains.map(({ domain, spire }) => (
+        {citadel.domains.map(({ domain, spire, hasRepaired }) => (
           <button
             key={domain.id}
             type="button"
             className="spire-button"
             onClick={() => setSelectedDomainId(domain.id)}
           >
-            <Spire domain={domain} spire={spire} />
+            <Spire domain={domain} spire={spire} hasRepaired={hasRepaired} />
           </button>
         ))}
       </div>

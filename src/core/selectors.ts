@@ -52,7 +52,10 @@ export type DailyView = {
 // without a tap-through, since logging is the one thing done every day
 // and a click-to-reveal would add friction to exactly that action.
 export function getDailyView(state: AppState, today: string): DailyView {
-  const activeQuests = state.quests.filter((quest) => !quest.retiredAt)
+  // Resting quests drop off Today entirely — a recovery quest, being
+  // a normal (non-resting) Quest row under the same domain, shows up
+  // in its place automatically without any special-casing here.
+  const activeQuests = state.quests.filter((quest) => !quest.retiredAt && quest.restState !== 'resting')
 
   const domainGroups = state.domains
     .filter((domain) => !domain.archivedAt)
@@ -81,6 +84,7 @@ export function getDailyView(state: AppState, today: string): DailyView {
 export type CitadelDomainView = {
   domain: Domain
   spire: DomainSpire
+  hasRepaired: boolean // ever returned from the Inn — see actions/restActions.ts
 }
 
 export type CitadelView = {
@@ -94,6 +98,7 @@ export function getCitadelView(state: AppState, today: string): CitadelView {
     .map((domain) => ({
       domain,
       spire: deriveSpire(domain, state.quests, state.logEntries, today),
+      hasRepaired: state.restRecords.some((r) => r.domainId === domain.id && r.endedAt !== null),
     }))
 
   return { domains }
@@ -165,7 +170,7 @@ export function getWeeklyReviewView(
             current,
             target,
             entries,
-            days: questDayBreakdown(quest, state.logEntries, week, today),
+            days: questDayBreakdown(quest, state.logEntries, week, today, state.restRecords),
           }
         }),
     }))
@@ -201,7 +206,14 @@ export function getQuestMonthlyBreakdown(
   today: string,
   months: number,
 ): QuestMonth[] {
-  return questMonthlyBreakdown(quest, state.logEntries, today, months)
+  return questMonthlyBreakdown(quest, state.logEntries, today, months, state.restRecords)
+}
+
+// A domain's currently-open Inn stays (not yet returned from) — used
+// by DomainView to show what's reduced/resting right now and offer a
+// Return action per stay.
+export function getActiveRestRecords(state: AppState, domainId: string) {
+  return state.restRecords.filter((r) => r.domainId === domainId && r.endedAt === null)
 }
 
 // A quest's most recent log entries, all-time — used by DomainView's

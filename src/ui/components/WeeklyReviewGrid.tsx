@@ -22,15 +22,18 @@ function formatRange(startKey: string, endKey: string): string {
 // daily target). Week-window quests only ever show a plain count —
 // there's no real daily target to judge against, so this doesn't
 // invent one; the week's own current/target above is the real signal
-// for those. Either way this is the "which days did I actually log,
-// and how much" picture the met/unmet marker alone can't show.
+// for those. A day covered by an Inn stay overrides either case —
+// shown as rested, not as a miss, so a rested stretch doesn't render
+// identically to a neglected one. Either way this is the "which days
+// did I actually log, and how much" picture the met/unmet marker
+// alone can't show.
 function QuestDayGrid({ days }: { days: QuestDay[] }) {
   return (
     <div className="quest-day-grid">
       {days.map((d, i) => (
         <div key={d.day} className={`quest-day-cell quest-day-${d.level ?? 'plain'}`}>
           <span className="quest-day-label">{DAY_LABELS[i]}</span>
-          <span className="quest-day-count">{d.count}</span>
+          <span className="quest-day-count">{d.level === 'rested' ? '·' : d.count}</span>
         </div>
       ))}
     </div>
@@ -62,7 +65,8 @@ export function WeeklyReviewGrid({ review }: Props) {
       <p className="settings-hint">
         Under each quest: that day's count. Daily-target quests: bold = met, muted italic = under,
         underlined = over. Weekly-target quests show a plain daily count (the target is for the
-        whole week, so there's no single day to judge).
+        whole week, so there's no single day to judge). A dot means the quest was resting or reduced
+        at the Inn that day — not counted as a miss.
       </p>
 
       {review.pastIntent && (

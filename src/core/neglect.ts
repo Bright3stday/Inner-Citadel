@@ -22,7 +22,16 @@ export function isNeglected(
   logs: LogEntry[],
   today: string,
 ): boolean {
-  const domainQuestIds = new Set(quests.filter((q) => q.domainId === domainId).map((q) => q.id))
+  const domainQuests = quests.filter((q) => q.domainId === domainId)
+
+  // The Inn: a domain with anything currently resting is never
+  // neglected, even if its recovery quests go unlogged too — that's
+  // the deliberate point of resting rather than a loophole. This also
+  // covers deriveCondition's crumbling check, which goes through this
+  // same function. See model/types.ts RestRecord.
+  if (domainQuests.some((q) => q.restState === 'resting')) return false
+
+  const domainQuestIds = new Set(domainQuests.map((q) => q.id))
   const domainLogs = logs.filter((log) => domainQuestIds.has(log.questId))
 
   if (domainLogs.length === 0) return false

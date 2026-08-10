@@ -1,5 +1,5 @@
 import { newId } from './ids'
-import type { AppState, Domain, Quest, QuestMethod } from './types'
+import type { AppState, Domain, Quest, QuestMethod, RestRecord } from './types'
 
 const SCHEMA_VERSION = 1
 
@@ -17,6 +17,7 @@ export function emptyAppState(): AppState {
     daySessions: [],
     dismissedPrompts: [],
     weeklyIntents: [],
+    restRecords: [],
     settings: {
       reflectionCharLimit: 500,
       weekStartsOn: 1,
@@ -50,6 +51,8 @@ export function newQuest(params: {
   unitLabel: string
   methods?: QuestMethod[]
   suggestedDays?: number[] | null
+  isRecoveryQuest?: boolean
+  restRecordId?: string | null
 }): Quest {
   return {
     id: newId('qst'),
@@ -63,5 +66,29 @@ export function newQuest(params: {
     createdAt: nowIso(),
     retiredAt: null,
     notes: null,
+    restState: 'active',
+    preRestTargetCount: null,
+    isRecoveryQuest: params.isRecoveryQuest ?? false,
+    restRecordId: params.restRecordId ?? null,
+  }
+}
+
+export function newRestRecord(params: {
+  domainId: string
+  mode: 'reduced' | 'resting'
+  questIds: string[]
+  recoverySetId?: string | null
+  reason: string | null
+}): RestRecord {
+  return {
+    id: newId('rst'),
+    domainId: params.domainId,
+    mode: params.mode,
+    startedAt: nowIso(),
+    endedAt: null,
+    questIds: params.questIds,
+    recoverySetId: params.recoverySetId ?? null,
+    recoveryQuestIds: [],
+    reason: params.reason,
   }
 }

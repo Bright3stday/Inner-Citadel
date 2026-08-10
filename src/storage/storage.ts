@@ -10,9 +10,10 @@ const BACKUP_KEY = 'innerCitadel.backup'
  * a loud failure rather than a silent reset. See docs/architecture.md §6.
  *
  * migrate.ts (schema upgrades) is still deferred — only schemaVersion 1
- * exists so far. weeklyIntents was added after some documents were
- * already saved without it, so it's defaulted here rather than left to
- * crash the first array method that touches it.
+ * exists so far. Fields added after some documents were already saved
+ * are defaulted here rather than left to crash the first thing that
+ * touches them: weeklyIntents, restRecords, and each quest's Inn
+ * fields (restState/preRestTargetCount/isRecoveryQuest/restRecordId).
  */
 export function load(): AppState {
   const raw = localStorage.getItem(KEY)
@@ -20,7 +21,18 @@ export function load(): AppState {
 
   try {
     const parsed = JSON.parse(raw) as AppState
-    return { ...parsed, weeklyIntents: parsed.weeklyIntents ?? [] }
+    return {
+      ...parsed,
+      weeklyIntents: parsed.weeklyIntents ?? [],
+      restRecords: parsed.restRecords ?? [],
+      quests: (parsed.quests ?? []).map((quest) => ({
+        ...quest,
+        restState: quest.restState ?? 'active',
+        preRestTargetCount: quest.preRestTargetCount ?? null,
+        isRecoveryQuest: quest.isRecoveryQuest ?? false,
+        restRecordId: quest.restRecordId ?? null,
+      })),
+    }
   } catch (err) {
     throw new Error(
       `Stored Inner Citadel data at localStorage["${KEY}"] is not valid JSON and could not be loaded. ` +

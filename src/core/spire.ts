@@ -70,7 +70,13 @@ export function deriveCondition(
 
   if (isNeglected(domain.id, quests, logs, today)) return 'crumbling'
 
-  const activeQuests = domainQuests.filter((q) => !q.retiredAt)
+  // Resting quests are paused — excluded here so they don't count
+  // against thriving while resting (they also can't count for it,
+  // since they're not being logged). A currently-active recovery
+  // quest isn't excluded: it's a normal Quest row, so logging it
+  // genuinely feeds this same real rule, which is the point — resting
+  // properly is real practice, not a gap. See model/types.ts RestRecord.
+  const activeQuests = domainQuests.filter((q) => !q.retiredAt && q.restState !== 'resting')
   // Guard: "every quest in an empty set met its target" is vacuously
   // true. Without this check a domain with zero active quests would
   // render as thriving.

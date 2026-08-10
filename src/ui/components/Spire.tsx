@@ -3,6 +3,7 @@ import type { Domain, DomainSpire } from '../../model/types'
 type Props = {
   domain: Domain
   spire: DomainSpire
+  hasRepaired?: boolean // ever returned from the Inn — see actions/restActions.ts
 }
 
 type Segment = 'base' | 'window' | 'battlement'
@@ -34,7 +35,13 @@ const TOWER_TIERS: Record<number, Segment[]> = {
 // window glows warm, the same "sign of life" logic as embers. Every
 // other pixel — stone, cracks, rubble, the flag pole — stays on the
 // existing --fg/--muted/--bg scale.
-export function Spire({ domain, spire }: Props) {
+//
+// A patched-stone overlay (hasRepaired) marks a domain that's ever
+// returned from the Inn — deliberately permanent once earned, not
+// tied to the domain's current condition. The gap doesn't get quietly
+// erased; the citadel shows evidence of repair instead. Still
+// greyscale — a texture, not a color.
+export function Spire({ domain, spire, hasRepaired = false }: Props) {
   const recipe = TOWER_TIERS[spire.heightTier] ?? []
   const windowIndices = recipe
     .map((segment, i) => (segment === 'window' ? i : -1))
@@ -78,6 +85,7 @@ export function Spire({ domain, spire }: Props) {
               ))
               .reverse()}
             {isCrumbling && <div className="tower-rubble" />}
+            {hasRepaired && <div className="tower-patch" title="Returned from the Inn" />}
           </>
         )}
       </div>
