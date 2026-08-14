@@ -7,7 +7,15 @@ type Props = {
   review: WeeklyReview
 }
 
-const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] // index = JS Date.getDay()
+
+// Derived from the actual date rather than position in the week — the
+// week's start day is a setting (Settings.weekStartsOn), so a fixed
+// Monday-first array would mislabel every day for a Sunday-start week.
+function weekdayLabel(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  return WEEKDAY_LABELS[new Date(y, m - 1, d).getDay()]
+}
 
 function formatRange(startKey: string, endKey: string): string {
   const fmt = (key: string) => {
@@ -30,9 +38,9 @@ function formatRange(startKey: string, endKey: string): string {
 function QuestDayGrid({ days }: { days: QuestDay[] }) {
   return (
     <div className="quest-day-grid">
-      {days.map((d, i) => (
+      {days.map((d) => (
         <div key={d.day} className={`quest-day-cell quest-day-${d.level ?? 'plain'}`}>
-          <span className="quest-day-label">{DAY_LABELS[i]}</span>
+          <span className="quest-day-label">{weekdayLabel(d.day)}</span>
           <span className="quest-day-count">{d.level === 'rested' ? '·' : d.count}</span>
         </div>
       ))}
@@ -50,9 +58,7 @@ export function WeeklyReviewGrid({ review }: Props) {
 
   if (!review.hasHistory) {
     return (
-      <p className="empty">
-        Nothing to review yet — this fills in after your first full Monday–Sunday week.
-      </p>
+      <p className="empty">Nothing to review yet — this fills in after your first full week.</p>
     )
   }
 

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { exportToFile, importFromFile } from '../../storage/transfer'
 import { replaceState } from '../../actions/transferActions'
+import { updateSettings } from '../../actions/settingsActions'
 import * as storage from '../../storage/storage'
 import type { AppState } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
@@ -10,10 +11,23 @@ type Props = {
   apply: Apply
 }
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function notificationPermission(): NotificationPermission | 'unsupported' {
+  return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+}
+
 export function SettingsView({ state, apply }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [importedAt, setImportedAt] = useState<string | null>(null)
+  const [permission, setPermission] = useState(notificationPermission)
+
+  async function handleRequestPermission() {
+    if (typeof Notification === 'undefined') return
+    const result = await Notification.requestPermission()
+    setPermission(result)
+  }
 
   function handleExport() {
     exportToFile(state)
@@ -62,6 +76,71 @@ export function SettingsView({ state, apply }: Props) {
   return (
     <div className="view settings-view">
       <h1>Settings</h1>
+
+      <div className="settings-section">
+        <h2>Weekly ritual</h2>
+        <label className="settings-field">
+          Week starts on
+          <select
+            value={state.settings.weekStartsOn}
+            onChange={(e) => apply(updateSettings, { weekStartsOn: Number(e.target.value) as 0 | 1 })}
+          >
+            <option value={1}>Monday</option>
+            <option value={0}>Sunday</option>
+          </select>
+        </label>
+
+        <label className="settings-field">
+          Remind me
+          <select
+            value={state.settings.reminderDay ?? ''}
+            onChange={(e) =>
+              apply(updateSettings, { reminderDay: e.target.value === '' ? null : Number(e.target.value) })
+            }
+          >
+            <option value="">Off</option>
+            {WEEKDAY_NAMES.map((name, i) => (
+              <option key={i} value={i}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {state.settings.reminderDay !== null && (
+          <label className="settings-field">
+            At
+            <input
+              type="time"
+              value={state.settings.reminderTime ?? '09:00'}
+              onChange={(e) => apply(updateSettings, { reminderTime: e.target.value })}
+            />
+          </label>
+        )}
+
+        {state.settings.reminderDay !== null && permission !== 'granted' && (
+          <>
+            {permission === 'unsupported' && (
+              <p className="settings-hint">Notifications aren't supported in this browser.</p>
+            )}
+            {permission === 'default' && (
+              <button type="button" onClick={handleRequestPermission}>
+                Enable notifications
+              </button>
+            )}
+            {permission === 'denied' && (
+              <p className="settings-hint">
+                Notifications are blocked — allow them for this site in your browser settings.
+              </p>
+            )}
+          </>
+        )}
+
+        <p className="settings-hint">
+          Best-effort only — checked when the app is open or just opened, not while fully closed. The
+          Review tab always works regardless.
+        </p>
+      </div>
 
       <div className="settings-section">
         <h2>Export</h2>

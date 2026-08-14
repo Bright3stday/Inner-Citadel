@@ -30,7 +30,7 @@ export function WeeklyReviewView({ state, apply }: Props) {
   const [weekOffset, setWeekOffset] = useState(0)
 
   const thisWeekReview = getWeeklyReviewView(state, today)
-  const upcomingWeekKey = weekRange(today).weekKey
+  const upcomingWeekKey = weekRange(today, state.settings.weekStartsOn).weekKey
   const upcomingIntent = state.weeklyIntents.find((i) => i.weekKey === upcomingWeekKey)?.note ?? null
 
   const [intentDraft, setIntentDraft] = useState(upcomingIntent ?? '')
@@ -42,7 +42,7 @@ export function WeeklyReviewView({ state, apply }: Props) {
     setTimeout(() => setSaved(false), 1500)
   }
 
-  const pagedWeek = lastCompletedWeeks(today, weekOffset + 1)[weekOffset]
+  const pagedWeek = lastCompletedWeeks(today, weekOffset + 1, state.settings.weekStartsOn)[weekOffset]
   const pagedReview = mode === 'trends' ? getWeeklyReviewView(state, today, pagedWeek) : null
 
   return (

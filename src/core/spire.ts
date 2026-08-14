@@ -22,6 +22,7 @@ export function deriveHeight(
   quests: Quest[],
   logs: LogEntry[],
   today: string,
+  weekStartsOn: 0 | 1,
 ): SpireHeight {
   const domainQuests = domainQuestsOf(domain, quests)
   const domainLogs = logs.filter((log) => domainQuests.some((q) => q.id === log.questId))
@@ -35,7 +36,7 @@ export function deriveHeight(
     domainLogs[0].forDate,
   )
 
-  const weeks = completedWeeksSince(firstLogDate, today)
+  const weeks = completedWeeksSince(firstLogDate, today, weekStartsOn)
   // One quest meeting target is enough for a week to qualify — the
   // looser bar (vs. the 'thriving' bar below) is what lets height and
   // condition tell different stories. See docs/architecture.md §3.
@@ -57,6 +58,7 @@ export function deriveCondition(
   quests: Quest[],
   logs: LogEntry[],
   today: string,
+  weekStartsOn: 0 | 1,
 ): SpireCondition {
   const domainQuests = domainQuestsOf(domain, quests)
 
@@ -68,7 +70,7 @@ export function deriveCondition(
   // own copy of it. See core/neglect.ts and docs/architecture.md §3.
   if (!domainHasAnyLog(domainQuests, logs)) return 'steady'
 
-  if (isNeglected(domain.id, quests, logs, today)) return 'crumbling'
+  if (isNeglected(domain.id, quests, logs, today, weekStartsOn)) return 'crumbling'
 
   // Resting quests are paused — excluded here so they don't count
   // against thriving while resting (they also can't count for it,
@@ -81,7 +83,7 @@ export function deriveCondition(
   // true. Without this check a domain with zero active quests would
   // render as thriving.
   if (activeQuests.length > 0) {
-    const weeks = lastCompletedWeeks(today, THRIVING_STREAK_WEEKS)
+    const weeks = lastCompletedWeeks(today, THRIVING_STREAK_WEEKS, weekStartsOn)
     const allMet =
       weeks.length === THRIVING_STREAK_WEEKS &&
       weeks.every((week) => activeQuests.every((quest) => questMetInWeek(quest, logs, week, today)))
@@ -96,9 +98,10 @@ export function deriveSpire(
   quests: Quest[],
   logs: LogEntry[],
   today: string,
+  weekStartsOn: 0 | 1,
 ): DomainSpire {
   return {
-    ...deriveHeight(domain, quests, logs, today),
-    condition: deriveCondition(domain, quests, logs, today),
+    ...deriveHeight(domain, quests, logs, today, weekStartsOn),
+    condition: deriveCondition(domain, quests, logs, today, weekStartsOn),
   }
 }

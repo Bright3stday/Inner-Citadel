@@ -21,6 +21,7 @@ export function isNeglected(
   quests: Quest[],
   logs: LogEntry[],
   today: string,
+  weekStartsOn: 0 | 1,
 ): boolean {
   const domainQuests = quests.filter((q) => q.domainId === domainId)
 
@@ -40,9 +41,9 @@ export function isNeglected(
     (min, log) => (log.forDate < min ? log.forDate : min),
     domainLogs[0].forDate,
   )
-  if (completedWeeksSince(firstLogDate, today).length === 0) return false
+  if (completedWeeksSince(firstLogDate, today, weekStartsOn).length === 0) return false
 
-  const weeks = lastCompletedWeeks(today, NEGLECT_WEEKS)
+  const weeks = lastCompletedWeeks(today, NEGLECT_WEEKS, weekStartsOn)
   const total = domainLogs
     .filter((log) => weeks.some((week) => isWithinRange(log.forDate, week)))
     .reduce((sum, log) => sum + log.count, 0)
@@ -55,6 +56,9 @@ export function findNeglectedDomains(
   quests: Quest[],
   logs: LogEntry[],
   today: string,
+  weekStartsOn: 0 | 1,
 ): Domain[] {
-  return domains.filter((domain) => !domain.archivedAt && isNeglected(domain.id, quests, logs, today))
+  return domains.filter(
+    (domain) => !domain.archivedAt && isNeglected(domain.id, quests, logs, today, weekStartsOn),
+  )
 }

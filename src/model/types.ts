@@ -127,6 +127,15 @@ export type RecoveryQuestSet = {
 export type Settings = {
   reflectionCharLimit: number
   weekStartsOn: 0 | 1 // 0=Sunday, 1=Monday
+
+  // Weekly ritual reminder — best-effort. Browser Notification API,
+  // checked when the app is opened or brought to the foreground; there
+  // is no server, so nothing can wake the app while it's fully closed.
+  // The Review tab is the guaranteed fallback, not this. null =
+  // disabled.
+  reminderDay: number | null // 0=Sun..6=Sat
+  reminderTime: string | null // "HH:MM", 24h
+  lastReminderWeekKey: string | null // which week's reminder was last shown, to avoid repeats
 }
 
 // ── Derived — computed on read, never persisted ───────────────

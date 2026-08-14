@@ -1,12 +1,15 @@
-// Calendar math over "YYYY-MM-DD" day keys. Weeks are fixed Mon-Sun,
-// per the architecture decision in docs/architecture.md §0. No Date
-// objects cross this module's boundary — everything else in the app
-// works with day keys and week ranges only.
+// Calendar math over "YYYY-MM-DD" day keys. Weeks are fixed calendar
+// weeks (not rolling 7-day windows), per the architecture decision in
+// docs/architecture.md §0 — but which day they START on is a real
+// setting (Settings.weekStartsOn, §2.7), threaded through every
+// function below as an explicit parameter rather than assumed. No
+// Date objects cross this module's boundary — everything else in the
+// app works with day keys and week ranges only.
 
 export type WeekRange = {
-  startKey: string // Monday, "YYYY-MM-DD"
-  endKey: string // Sunday, "YYYY-MM-DD"
-  weekKey: string // "YYYY-Www", stable label for this week
+  startKey: string // the week's first day, "YYYY-MM-DD"
+  endKey: string // the week's last day, "YYYY-MM-DD"
+  weekKey: string // stable label for this week — just startKey; unique and correct for any weekStartsOn
 }
 
 function parseKey(key: string): Date {
@@ -36,32 +39,18 @@ export function dayOfWeek(key: string): number {
   return parseKey(key).getDay()
 }
 
-/** The Monday, "YYYY-MM-DD", of the week containing `key`. */
-export function weekStartKey(key: string): string {
-  const dow = dayOfWeek(key)
-  const diffToMonday = dow === 0 ? -6 : 1 - dow
-  return addDays(key, diffToMonday)
+/** The first day, "YYYY-MM-DD", of the week containing `key`. */
+export function weekStartKey(key: string, weekStartsOn: 0 | 1): string {
+  const dow = dayOfWeek(key) // 0=Sun..6=Sat
+  const diffToStart = weekStartsOn === 1 ? (dow === 0 ? -6 : 1 - dow) : -dow
+  return addDays(key, diffToStart)
 }
 
-/** Standard ISO week number, computed off the week's Monday. */
-function isoWeekLabel(mondayKey: string): string {
-  const monday = parseKey(mondayKey)
-  const thursday = new Date(monday)
-  thursday.setDate(monday.getDate() + 3)
-  const year = thursday.getFullYear()
-  const firstThursday = new Date(year, 0, 1)
-  const firstThursdayDow = firstThursday.getDay() === 0 ? 7 : firstThursday.getDay()
-  firstThursday.setDate(firstThursday.getDate() + (4 - firstThursdayDow))
-  const weekNum =
-    1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86_400_000))
-  return `${year}-W${String(weekNum).padStart(2, '0')}`
-}
-
-/** The full Mon-Sun range containing `key`. */
-export function weekRange(key: string): WeekRange {
-  const startKey = weekStartKey(key)
+/** The full week range containing `key`. */
+export function weekRange(key: string, weekStartsOn: 0 | 1): WeekRange {
+  const startKey = weekStartKey(key, weekStartsOn)
   const endKey = addDays(startKey, 6)
-  return { startKey, endKey, weekKey: isoWeekLabel(startKey) }
+  return { startKey, endKey, weekKey: startKey }
 }
 
 /**
@@ -87,13 +76,13 @@ export function lastMonths(today: string, n: number): string[] {
  * The `n` most recently COMPLETED weeks, excluding the current
  * in-progress week. Most recent first.
  */
-export function lastCompletedWeeks(today: string, n: number): WeekRange[] {
-  const currentWeekStart = weekStartKey(today)
+export function lastCompletedWeeks(today: string, n: number, weekStartsOn: 0 | 1): WeekRange[] {
+  const currentWeekStart = weekStartKey(today, weekStartsOn)
   const weeks: WeekRange[] = []
   let cursorEnd = addDays(currentWeekStart, -1)
   for (let i = 0; i < n; i++) {
     const cursorStart = addDays(cursorEnd, -6)
-    weeks.push({ startKey: cursorStart, endKey: cursorEnd, weekKey: isoWeekLabel(cursorStart) })
+    weeks.push({ startKey: cursorStart, endKey: cursorEnd, weekKey: cursorStart })
     cursorEnd = addDays(cursorStart, -1)
   }
   return weeks
@@ -105,16 +94,16 @@ export function lastCompletedWeeks(today: string, n: number): WeekRange[] {
  * inside the current in-progress week (nothing has completed yet).
  * Used by core/spire.ts to scan a domain's full history for height.
  */
-export function completedWeeksSince(fromKey: string, today: string): WeekRange[] {
-  const firstWeekStart = weekStartKey(fromKey)
-  const lastCompletedStart = addDays(weekStartKey(today), -7)
+export function completedWeeksSince(fromKey: string, today: string, weekStartsOn: 0 | 1): WeekRange[] {
+  const firstWeekStart = weekStartKey(fromKey, weekStartsOn)
+  const lastCompletedStart = addDays(weekStartKey(today, weekStartsOn), -7)
   if (firstWeekStart > lastCompletedStart) return []
 
   const weeks: WeekRange[] = []
   let cursorStart = firstWeekStart
   while (cursorStart <= lastCompletedStart) {
     const cursorEnd = addDays(cursorStart, 6)
-    weeks.push({ startKey: cursorStart, endKey: cursorEnd, weekKey: isoWeekLabel(cursorStart) })
+    weeks.push({ startKey: cursorStart, endKey: cursorEnd, weekKey: cursorStart })
     cursorStart = addDays(cursorStart, 7)
   }
   return weeks
@@ -124,7 +113,7 @@ export function isWithinRange(key: string, range: WeekRange): boolean {
   return key >= range.startKey && key <= range.endKey
 }
 
-/** The 7 day keys in `range`, Monday through Sunday. */
+/** The 7 day keys in `range`, in order from its start day. */
 export function daysInRange(range: WeekRange): string[] {
   const days: string[] = []
   let cursor = range.startKey

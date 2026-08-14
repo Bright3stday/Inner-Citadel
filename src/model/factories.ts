@@ -21,6 +21,9 @@ export function emptyAppState(): AppState {
     settings: {
       reflectionCharLimit: 500,
       weekStartsOn: 1,
+      reminderDay: null,
+      reminderTime: null,
+      lastReminderWeekKey: null,
     },
     meta: {
       createdAt: now,

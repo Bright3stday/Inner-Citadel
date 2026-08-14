@@ -56,6 +56,7 @@ export function getDailyView(state: AppState, today: string): DailyView {
   // a normal (non-resting) Quest row under the same domain, shows up
   // in its place automatically without any special-casing here.
   const activeQuests = state.quests.filter((quest) => !quest.retiredAt && quest.restState !== 'resting')
+  const weekStartsOn = state.settings.weekStartsOn
 
   const domainGroups = state.domains
     .filter((domain) => !domain.archivedAt)
@@ -67,7 +68,7 @@ export function getDailyView(state: AppState, today: string): DailyView {
         .filter((quest) => quest.domainId === domain.id)
         .map((quest) => ({
           quest,
-          progress: questProgress(quest, state.logEntries, today),
+          progress: questProgress(quest, state.logEntries, today, weekStartsOn),
           isDueToday: quest.suggestedDays === null || quest.suggestedDays.includes(dayOfWeek(today)),
           logsToday: state.logEntries.filter((log) => log.questId === quest.id && log.forDate === today)
             .length,
@@ -92,12 +93,13 @@ export type CitadelView = {
 }
 
 export function getCitadelView(state: AppState, today: string): CitadelView {
+  const weekStartsOn = state.settings.weekStartsOn
   const domains = state.domains
     .filter((d) => !d.archivedAt)
     .sort((a, b) => a.order - b.order)
     .map((domain) => ({
       domain,
-      spire: deriveSpire(domain, state.quests, state.logEntries, today),
+      spire: deriveSpire(domain, state.quests, state.logEntries, today, weekStartsOn),
       hasRepaired: state.restRecords.some((r) => r.domainId === domain.id && r.endedAt !== null),
     }))
 
@@ -106,8 +108,9 @@ export function getCitadelView(state: AppState, today: string): CitadelView {
 
 /** Neglected domains whose prompt hasn't been dismissed for the current week. */
 export function getNeglectPrompts(state: AppState, today: string): Domain[] {
-  const neglected = findNeglectedDomains(state.domains, state.quests, state.logEntries, today)
-  const currentWeekKey = weekRange(today).weekKey
+  const weekStartsOn = state.settings.weekStartsOn
+  const neglected = findNeglectedDomains(state.domains, state.quests, state.logEntries, today, weekStartsOn)
+  const currentWeekKey = weekRange(today, weekStartsOn).weekKey
 
   return neglected.filter(
     (domain) =>
@@ -124,7 +127,7 @@ export type WeeklyReviewQuest = {
   current: number // real counted quantity for `week` — see core/tally.ts questWeekTally
   target: number
   entries: LogEntry[] // this quest's contributing log entries within `week`, most recent first
-  days: QuestDay[] // day-by-day counts across `week`, Mon-Sun — see core/tally.ts questDayBreakdown
+  days: QuestDay[] // day-by-day counts across `week`, in week order — see core/tally.ts questDayBreakdown
 }
 
 export type WeeklyReviewDomain = {
@@ -149,14 +152,15 @@ export type WeeklyReview = {
 export function getWeeklyReviewView(
   state: AppState,
   today: string,
-  week: WeekRange = lastCompletedWeeks(today, 1)[0],
+  week: WeekRange = lastCompletedWeeks(today, 1, state.settings.weekStartsOn)[0],
 ): WeeklyReview {
+  const weekStartsOn = state.settings.weekStartsOn
   const domains = state.domains
     .filter((d) => !d.archivedAt && d.createdAt.slice(0, 10) <= week.endKey)
     .sort((a, b) => a.order - b.order)
     .map((domain) => ({
       domain,
-      spire: deriveSpire(domain, state.quests, state.logEntries, today),
+      spire: deriveSpire(domain, state.quests, state.logEntries, today, weekStartsOn),
       quests: state.quests
         .filter((q) => q.domainId === domain.id && q.createdAt.slice(0, 10) <= week.endKey)
         .map((quest) => {
@@ -206,7 +210,14 @@ export function getQuestMonthlyBreakdown(
   today: string,
   months: number,
 ): QuestMonth[] {
-  return questMonthlyBreakdown(quest, state.logEntries, today, months, state.restRecords)
+  return questMonthlyBreakdown(
+    quest,
+    state.logEntries,
+    today,
+    months,
+    state.settings.weekStartsOn,
+    state.restRecords,
+  )
 }
 
 // Every currently-open Inn stay, across all domains — the Inn now

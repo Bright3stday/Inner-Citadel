@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppState } from './state/useAppState'
+import { useWeeklyReminder } from './state/useWeeklyReminder'
 import { DailyView } from './ui/views/DailyView'
 import { CitadelView } from './ui/views/CitadelView'
 import { SettingsView } from './ui/views/SettingsView'
@@ -20,6 +21,7 @@ type Tab = 'daily' | 'citadel' | 'review' | 'settings'
 export function App() {
   const { state, apply } = useAppState()
   const [tab, setTab] = useState<Tab>('daily')
+  useWeeklyReminder(state, apply)
 
   return (
     <div className="app" data-tab={tab}>

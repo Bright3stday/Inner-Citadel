@@ -493,6 +493,23 @@ h1 {
   margin: 0 0 0.6rem;
 }
 
+.settings-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+
+.settings-field select,
+.settings-field input {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--fg);
+}
+
 .settings-section button {
   padding: 0.5rem 0.9rem;
   background: var(--panel);

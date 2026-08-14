@@ -29,11 +29,16 @@ function wasQuestRestedInRange(
  * containing today). Any logged method contributes toward the same
  * target — methods are interchangeable units, not weighted.
  */
-export function questProgress(quest: Quest, logs: LogEntry[], today: string): QuestProgress {
+export function questProgress(
+  quest: Quest,
+  logs: LogEntry[],
+  today: string,
+  weekStartsOn: 0 | 1,
+): QuestProgress {
   const inWindow =
     quest.window === 'day'
       ? (forDate: string) => forDate === today
-      : (forDate: string) => isWithinRange(forDate, weekRange(today))
+      : (forDate: string) => isWithinRange(forDate, weekRange(today, weekStartsOn))
 
   const current = logs
     .filter((log) => log.questId === quest.id && inWindow(log.forDate))
@@ -197,6 +202,7 @@ export function questMonthlyBreakdown(
   logs: LogEntry[],
   today: string,
   months: number,
+  weekStartsOn: 0 | 1,
   restRecords: RestRecord[] = [],
 ): QuestMonth[] {
   const buckets = new Map<string, { under: number; met: number; over: number }>()
@@ -211,7 +217,7 @@ export function questMonthlyBreakdown(
   const retiredDate = quest.retiredAt?.slice(0, 10) ?? null
 
   if (quest.window === 'week') {
-    for (const week of lastCompletedWeeks(today, months * 5)) {
+    for (const week of lastCompletedWeeks(today, months * 5, weekStartsOn)) {
       if (createdDate > week.endKey) continue
       if (retiredDate !== null && retiredDate < week.startKey) continue
       if (wasQuestRestedInRange(quest, week.startKey, week.endKey, restRecords)) continue
