@@ -69,12 +69,18 @@ body {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
+/* flex:1 with no basis lets 5 tabs fill one row wherever there's room;
+   min-width stops that same rule from silently shrinking a button
+   below its label and pushing it off-screen — flex-wrap moves it to a
+   second row instead once a screen is too narrow for all five. */
 .tabs button {
   flex: 1;
+  min-width: 4.5rem;
   padding: 0.5rem;
   background: var(--panel);
   border: 2px solid var(--line);
@@ -1307,6 +1313,27 @@ h1 {
   border: 1px solid var(--line);
   padding: 0.6rem;
   margin-bottom: 0.6rem;
+}
+
+/* The claim moment — deliberately not styled like a routine action
+   row. Re-shows the node's own criteria as something to actually read
+   again, not a generic "are you sure?" dialog. */
+.mastery-claim {
+  border-left: 3px solid var(--line);
+  padding-left: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.mastery-claim-prompt {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0 0 0.2rem;
+}
+
+.mastery-claim-criteria {
+  font-style: italic;
+  font-size: 0.9rem;
+  margin: 0 0 0.6rem;
 }
 
 /* Same "texture, not color" restraint as the spire's own condition

@@ -36,11 +36,24 @@ function defaultSelection(nodeViews: MasteryNodeView[]): string | null {
 // selected node's full detail renders below the track.
 export function MasteryTree({ nodeViews, gp, onUnlock, onEdit, onDelete }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Separate from selection on purpose: tapping "Claim" doesn't unlock
+  // anything by itself, it opens a second, distinct step that re-shows
+  // the node's own criteria and asks you to affirm it — not a generic
+  // "are you sure?", a real "is this actually true yet?" moment. See
+  // docs/decision-log-and-roadmap.md — an earlier version fired on one
+  // tap plus a native browser confirm(), which read as a purchase
+  // rather than a claim.
+  const [confirmingNodeId, setConfirmingNodeId] = useState<string | null>(null)
   const activeId = selectedId ?? defaultSelection(nodeViews)
   const selected = nodeViews.find((view) => view.node.id === activeId) ?? null
 
   if (nodeViews.length === 0) {
     return <p className="empty">No mastery nodes yet.</p>
+  }
+
+  function selectNode(nodeId: string) {
+    setSelectedId(nodeId)
+    setConfirmingNodeId(null)
   }
 
   return (
@@ -53,7 +66,7 @@ export function MasteryTree({ nodeViews, gp, onUnlock, onEdit, onDelete }: Props
             className={`mastery-node-marker mastery-node-marker-${view.state}${
               view.node.id === activeId ? ' mastery-node-marker-active' : ''
             }`}
-            onClick={() => setSelectedId(view.node.id)}
+            onClick={() => selectNode(view.node.id)}
             title={view.node.title}
           >
             {view.state === 'unlocked' ? '✓' : index + 1}
@@ -81,28 +94,50 @@ export function MasteryTree({ nodeViews, gp, onUnlock, onEdit, onDelete }: Props
             )}
             {selected.node.contributingQuestIds.length === 0 && ' — no quests linked'}
           </p>
-          <div className="quest-editor-actions">
-            {selected.state === 'eligible' && gp.balance >= NODE_UNLOCK_COST && (
-              <button type="button" onClick={() => onUnlock(selected.node)}>
-                Unlock (−{NODE_UNLOCK_COST} GP)
-              </button>
-            )}
-            {selected.state === 'eligible' && gp.balance < NODE_UNLOCK_COST && (
-              <span className="settings-hint">
-                Eligible — needs {NODE_UNLOCK_COST - gp.balance} more GP to unlock
-              </span>
-            )}
-            {selected.state !== 'unlocked' && (
-              <>
-                <button type="button" onClick={() => onEdit(selected.node)}>
-                  Edit
+
+          {confirmingNodeId === selected.node.id ? (
+            <div className="mastery-claim">
+              <p className="mastery-claim-prompt">You're claiming:</p>
+              <p className="mastery-claim-criteria">"{selected.node.criteria}"</p>
+              <div className="quest-editor-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUnlock(selected.node)
+                    setConfirmingNodeId(null)
+                  }}
+                >
+                  Confirm &amp; unlock (−{NODE_UNLOCK_COST} GP)
                 </button>
-                <button type="button" onClick={() => onDelete(selected.node)}>
-                  Delete
+                <button type="button" onClick={() => setConfirmingNodeId(null)}>
+                  Not yet
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="quest-editor-actions">
+              {selected.state === 'eligible' && gp.balance >= NODE_UNLOCK_COST && (
+                <button type="button" onClick={() => setConfirmingNodeId(selected.node.id)}>
+                  Claim
+                </button>
+              )}
+              {selected.state === 'eligible' && gp.balance < NODE_UNLOCK_COST && (
+                <span className="settings-hint">
+                  Eligible — needs {NODE_UNLOCK_COST - gp.balance} more GP to unlock
+                </span>
+              )}
+              {selected.state !== 'unlocked' && (
+                <>
+                  <button type="button" onClick={() => onEdit(selected.node)}>
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => onDelete(selected.node)}>
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

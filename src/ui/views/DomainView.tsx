@@ -4,7 +4,6 @@ import { archiveDomain, renameDomain } from '../../actions/domainActions'
 import { deleteMasteryNode, unlockMasteryNode } from '../../actions/masteryActions'
 import { getDomainMasteryNodes, getGrowthPoints, getQuestLogHistory } from '../../core/selectors'
 import { todayKey } from '../../core/dates'
-import { NODE_UNLOCK_COST } from '../../core/rules'
 import { QuestEditorView } from './QuestEditorView'
 import { QuestImportView } from './QuestImportView'
 import { MasteryNodeEditorView } from './MasteryNodeEditorView'
@@ -82,11 +81,10 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
     setNodeMode('none')
   }
 
+  // Confirmation lives in MasteryTree itself now — a two-step in-app
+  // "Claim" -> re-affirm criteria -> "Confirm & unlock" flow, not a
+  // native browser confirm(). This is a straight pass-through.
   function handleUnlock(node: MasteryNode) {
-    const confirmed = window.confirm(
-      `Unlock "${node.title}"?\n\nYou said you'd know it by: "${node.criteria}"\n\nSpends ${NODE_UNLOCK_COST} GP (balance: ${gp.balance}). Practice earned the eligibility — this confirms you've genuinely met it.`,
-    )
-    if (!confirmed) return
     apply(unlockMasteryNode, { nodeId: node.id })
   }
 
