@@ -1,14 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { retireQuest } from '../../actions/questActions'
 import { archiveDomain, renameDomain } from '../../actions/domainActions'
-import { getQuestLogHistory } from '../../core/selectors'
+import { deleteMasteryNode, unlockMasteryNode } from '../../actions/masteryActions'
+import { getDomainMasteryNodes, getGrowthPoints, getQuestLogHistory } from '../../core/selectors'
+import { todayKey } from '../../core/dates'
+import { NODE_UNLOCK_COST } from '../../core/rules'
 import { QuestEditorView } from './QuestEditorView'
 import { QuestImportView } from './QuestImportView'
+import { MasteryNodeEditorView } from './MasteryNodeEditorView'
+import { MasteryNodeImportView } from './MasteryNodeImportView'
+import { MasteryTree } from '../components/MasteryTree'
 import { CopyTextButton } from '../components/CopyTextButton'
 import { LogEntryList } from '../components/LogEntryList'
 import { QUEST_GENERATOR_PROMPT } from '../questGeneratorPrompt'
+import { MASTERY_NODE_PROMPT } from '../masteryNodePrompt'
 import { buildRecalibratePrompt, buildStrategiesPrompt } from '../domainPromptBuilders'
-import type { AppState, Domain, DomainSpire, Quest } from '../../model/types'
+import type { AppState, Domain, DomainSpire, MasteryNode, Quest } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
 type Props = {
@@ -20,14 +27,20 @@ type Props = {
 }
 
 type Mode = 'none' | 'add' | 'edit' | 'import'
+type NodeMode = 'none' | 'add' | 'edit' | 'import'
 
 export function DomainView({ state, apply, domain, spire, onBack }: Props) {
   const [mode, setMode] = useState<Mode>('none')
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null)
+  const [nodeMode, setNodeMode] = useState<NodeMode>('none')
+  const [editingNode, setEditingNode] = useState<MasteryNode | null>(null)
   const [renamingDomain, setRenamingDomain] = useState(false)
   const [domainNameDraft, setDomainNameDraft] = useState(domain.name)
   const [historyQuestId, setHistoryQuestId] = useState<string | null>(null)
   const quests = state.quests.filter((q) => q.domainId === domain.id && !q.retiredAt)
+  const today = todayKey()
+  const nodeViews = getDomainMasteryNodes(state, domain.id, today)
+  const gp = getGrowthPoints(state)
 
   function handleArchiveDomain() {
     const confirmed = window.confirm(
@@ -60,6 +73,30 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
     setRenamingDomain(false)
   }
 
+  function handleStartEditNode(node: MasteryNode) {
+    setEditingNode(node)
+    setNodeMode('edit')
+  }
+
+  function handleDoneEditingNode() {
+    setEditingNode(null)
+    setNodeMode('none')
+  }
+
+  function handleUnlock(node: MasteryNode) {
+    const confirmed = window.confirm(
+      `Unlock "${node.title}"?\n\nYou said you'd know it by: "${node.criteria}"\n\nSpends ${NODE_UNLOCK_COST} GP (balance: ${gp.balance}). Practice earned the eligibility — this confirms you've genuinely met it.`,
+    )
+    if (!confirmed) return
+    apply(unlockMasteryNode, { nodeId: node.id })
+  }
+
+  function handleDeleteNode(node: MasteryNode) {
+    const confirmed = window.confirm(`Delete node "${node.title}"? It hasn't been unlocked, so there's no record to lose.`)
+    if (!confirmed) return
+    apply(deleteMasteryNode, { nodeId: node.id })
+  }
+
   return (
     <div className="view domain-view">
       <button type="button" className="back-link" onClick={onBack}>
@@ -89,7 +126,7 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
       )}
 
       <p className="spire-meta">
-        {spire.condition} · {spire.heightWeeks}w
+        {spire.condition} · {spire.heightTier} node{spire.heightTier === 1 ? '' : 's'}
       </p>
 
       {quests.length === 0 && <p className="empty">No quests yet.</p>}
@@ -161,6 +198,55 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
           <p className="settings-hint">Paste into any capable AI. Copy-paste only — no AI calls in-app.</p>
         </>
       )}
+
+      <section className="mastery-section">
+        <div className="mastery-header-row">
+          <h2>Mastery nodes</h2>
+          <span className="settings-hint">
+            Growth Points: {gp.balance} (earned {gp.earned}, spent {gp.spent})
+          </span>
+        </div>
+
+        <MasteryTree
+          nodeViews={nodeViews}
+          gp={gp}
+          onUnlock={handleUnlock}
+          onEdit={handleStartEditNode}
+          onDelete={handleDeleteNode}
+        />
+
+        {nodeMode === 'add' && (
+          <MasteryNodeEditorView domain={domain} quests={quests} apply={apply} onDone={() => setNodeMode('none')} />
+        )}
+        {nodeMode === 'edit' && editingNode && (
+          <MasteryNodeEditorView
+            domain={domain}
+            quests={quests}
+            apply={apply}
+            node={editingNode}
+            onDone={handleDoneEditingNode}
+          />
+        )}
+        {nodeMode === 'import' && (
+          <MasteryNodeImportView domain={domain} quests={quests} apply={apply} onDone={() => setNodeMode('none')} />
+        )}
+        {nodeMode === 'none' && (
+          <>
+            <div className="quest-editor-actions">
+              <button type="button" onClick={() => setNodeMode('add')}>
+                + Add node
+              </button>
+              <button type="button" onClick={() => setNodeMode('import')}>
+                + Import node ideas
+              </button>
+            </div>
+            <div className="quest-editor-actions">
+              <CopyTextButton label="Copy mastery node prompt" getText={() => MASTERY_NODE_PROMPT} />
+            </div>
+            <p className="settings-hint">Paste into any capable AI. Copy-paste only — no AI calls in-app.</p>
+          </>
+        )}
+      </section>
 
       <button type="button" className="danger-link" onClick={handleArchiveDomain}>
         Archive domain

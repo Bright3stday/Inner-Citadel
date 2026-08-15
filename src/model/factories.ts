@@ -1,5 +1,5 @@
 import { newId } from './ids'
-import type { AppState, Domain, Quest, QuestMethod, RestRecord } from './types'
+import type { AppState, Domain, MasteryNode, Quest, QuestMethod, RestRecord, ThresholdUnit } from './types'
 
 const SCHEMA_VERSION = 1
 
@@ -18,6 +18,7 @@ export function emptyAppState(): AppState {
     dismissedPrompts: [],
     weeklyIntents: [],
     restRecords: [],
+    masteryNodes: [],
     settings: {
       reflectionCharLimit: 500,
       weekStartsOn: 1,
@@ -73,6 +74,29 @@ export function newQuest(params: {
     preRestTargetCount: null,
     isRecoveryQuest: params.isRecoveryQuest ?? false,
     restRecordId: params.restRecordId ?? null,
+  }
+}
+
+export function newMasteryNode(params: {
+  domainId: string
+  title: string
+  criteria: string
+  practiceThreshold: number
+  thresholdUnit: ThresholdUnit
+  contributingQuestIds: string[]
+  order: number
+}): MasteryNode {
+  return {
+    id: newId('node'),
+    domainId: params.domainId,
+    title: params.title,
+    criteria: params.criteria,
+    practiceThreshold: params.practiceThreshold,
+    thresholdUnit: params.thresholdUnit,
+    contributingQuestIds: params.contributingQuestIds,
+    order: params.order,
+    createdAt: nowIso(),
+    unlockedAt: null,
   }
 }
 

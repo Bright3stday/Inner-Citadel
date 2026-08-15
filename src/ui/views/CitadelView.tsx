@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { getCitadelView } from '../../core/selectors'
+import { getCitadelView, getGrowthPoints } from '../../core/selectors'
 import { todayKey } from '../../core/dates'
 import { addDomain } from '../../actions/domainActions'
 import { Spire } from '../components/Spire'
@@ -18,6 +18,7 @@ export function CitadelView({ state, apply, active }: Props) {
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null)
   const [newDomainName, setNewDomainName] = useState('')
   const citadel = getCitadelView(state, todayKey())
+  const gp = getGrowthPoints(state)
 
   // The tab bar doesn't unmount this view when you navigate away (all panels
   // stay mounted, see App.tsx), so a drilled-into domain would otherwise
@@ -50,6 +51,7 @@ export function CitadelView({ state, apply, active }: Props) {
   return (
     <div className="view citadel-view">
       <h1>The Citadel</h1>
+      <p className="settings-hint citadel-gp">Growth Points: {gp.balance}</p>
 
       {citadel.domains.length === 0 && <p className="empty">No domains yet.</p>}
       <div className="skyline">

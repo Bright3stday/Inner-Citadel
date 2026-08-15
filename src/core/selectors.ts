@@ -16,12 +16,15 @@ import {
 import { deriveSpire } from './spire'
 import { findNeglectedDomains } from './neglect'
 import { deriveForgeHeat } from './forge'
+import { getMasteryNodeViews, type MasteryNodeView } from './mastery'
+import { deriveGrowthPoints } from './growth'
 import type {
   AppState,
   DaySession,
   Domain,
   DomainSpire,
   ForgeHeat,
+  GrowthPoints,
   LogEntry,
   Quest,
   QuestProgress,
@@ -99,7 +102,7 @@ export function getCitadelView(state: AppState, today: string): CitadelView {
     .sort((a, b) => a.order - b.order)
     .map((domain) => ({
       domain,
-      spire: deriveSpire(domain, state.quests, state.logEntries, today, weekStartsOn),
+      spire: deriveSpire(domain, state.masteryNodes, state.quests, state.logEntries, today, weekStartsOn),
       hasRepaired: state.restRecords.some((r) => r.domainId === domain.id && r.endedAt !== null),
     }))
 
@@ -160,7 +163,7 @@ export function getWeeklyReviewView(
     .sort((a, b) => a.order - b.order)
     .map((domain) => ({
       domain,
-      spire: deriveSpire(domain, state.quests, state.logEntries, today, weekStartsOn),
+      spire: deriveSpire(domain, state.masteryNodes, state.quests, state.logEntries, today, weekStartsOn),
       quests: state.quests
         .filter((q) => q.domainId === domain.id && q.createdAt.slice(0, 10) <= week.endKey)
         .map((quest) => {
@@ -235,4 +238,15 @@ export function getQuestLogHistory(state: AppState, questId: string, limit = 20)
     .filter((log) => log.questId === questId)
     .sort((a, b) => (a.forDate === b.forDate ? b.loggedAt.localeCompare(a.loggedAt) : b.forDate.localeCompare(a.forDate)))
     .slice(0, limit)
+}
+
+// One domain's mastery nodes, in author order, with derived state and
+// practice count — see core/mastery.ts.
+export function getDomainMasteryNodes(state: AppState, domainId: string, today: string): MasteryNodeView[] {
+  return getMasteryNodeViews(domainId, state.masteryNodes, state.quests, state.logEntries, today, state.settings.weekStartsOn)
+}
+
+// Global GP balance — see core/growth.ts.
+export function getGrowthPoints(state: AppState): GrowthPoints {
+  return deriveGrowthPoints(state.logEntries, state.masteryNodes)
 }

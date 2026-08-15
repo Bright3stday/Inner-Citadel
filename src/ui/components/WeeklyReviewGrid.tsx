@@ -79,7 +79,7 @@ export function WeeklyReviewGrid({ review }: Props) {
           <div className="weekly-review-domain-header">
             <span className="quest-title">{domain.name}</span>
             <span className="settings-hint">
-              {spire.condition} · {spire.heightWeeks}w
+              {spire.condition} · {spire.heightTier} node{spire.heightTier === 1 ? '' : 's'}
             </span>
           </div>
           <ul className="weekly-review-quest-list">

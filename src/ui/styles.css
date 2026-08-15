@@ -475,6 +475,31 @@ h1 {
   text-transform: capitalize;
 }
 
+/* Construction progress — the practice signal meant to move most
+   weeks, even between node unlocks. See core/spire.ts nextNode. */
+.spire-construction {
+  width: 64px;
+  margin-top: 0.3rem;
+}
+
+.spire-construction-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.spire-construction-fill {
+  height: 100%;
+  background: var(--muted);
+}
+
+.spire-construction-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
 .settings-section {
   border: 2px solid var(--line);
   background: var(--panel);
@@ -1115,13 +1140,15 @@ h1 {
 }
 
 .quest-editor input,
-.quest-editor select {
+.quest-editor select,
+.quest-editor textarea {
   width: 100%;
   padding: 0.4rem;
   border: 1px solid var(--line);
   font-family: inherit;
   background: var(--bg);
   color: var(--fg);
+  resize: vertical;
 }
 
 .quest-editor-row {
@@ -1159,6 +1186,110 @@ h1 {
 .quest-editor-actions button:hover {
   background: var(--fg);
   color: var(--bg);
+}
+
+.mastery-section {
+  border-top: 2px solid var(--line);
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.mastery-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mastery-header-row h2 {
+  font-size: 0.9rem;
+  margin: 0 0 0.4rem;
+}
+
+.mastery-tree {
+  margin-bottom: 0.6rem;
+}
+
+/* The "Civilization-style tech tree branch" language from the decision
+   log, made literal: a compact horizontal path instead of every node's
+   full detail stacked and expanded at once. Still a flat ordered list
+   underneath — this only changes how much is on screen at a time. */
+.mastery-tree-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.5rem 0.2rem 0.8rem;
+  overflow-x: auto;
+}
+
+/* The connecting line sits behind the markers — each marker's own
+   background covers it at that x-position, so it visually links
+   marker to marker across the gaps rather than passing through them. */
+.mastery-tree-track::before {
+  content: '';
+  position: absolute;
+  left: 0.2rem;
+  right: 0.2rem;
+  top: 50%;
+  height: 2px;
+  background: var(--line);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.mastery-node-marker {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: var(--bg);
+  border: 1px solid var(--muted);
+  color: var(--muted);
+}
+
+.mastery-node-marker-eligible {
+  border-style: dashed;
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+/* Same invert-on-achievement language as the log-tap target flash and
+   the thriving spire's lit window — a claimed node reads as solid,
+   filled, done. */
+.mastery-node-marker-unlocked {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+}
+
+.mastery-node-marker-active {
+  box-shadow: 0 0 0 2px var(--fg);
+}
+
+.mastery-node {
+  border: 1px solid var(--line);
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Same "texture, not color" restraint as the spire's own condition
+   states — an unlocked node reads solid, an eligible one gets a
+   dashed border as a quiet "ready" cue, locked stays plain. */
+.mastery-node-eligible {
+  border-style: dashed;
+}
+
+.mastery-node-unlocked {
+  border-width: 2px;
 }
 
 .quest-import {

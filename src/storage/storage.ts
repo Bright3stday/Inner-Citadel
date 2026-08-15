@@ -12,9 +12,10 @@ const BACKUP_KEY = 'innerCitadel.backup'
  * migrate.ts (schema upgrades) is still deferred — only schemaVersion 1
  * exists so far. Fields added after some documents were already saved
  * are defaulted here rather than left to crash the first thing that
- * touches them: weeklyIntents, restRecords, each quest's Inn fields
- * (restState/preRestTargetCount/isRecoveryQuest/restRecordId), and the
- * reminder settings (reminderDay/reminderTime/lastReminderWeekKey).
+ * touches them: weeklyIntents, restRecords, masteryNodes, each quest's
+ * Inn fields (restState/preRestTargetCount/isRecoveryQuest/
+ * restRecordId), and the reminder settings (reminderDay/reminderTime/
+ * lastReminderWeekKey).
  */
 export function load(): AppState {
   const raw = localStorage.getItem(KEY)
@@ -26,6 +27,7 @@ export function load(): AppState {
       ...parsed,
       weeklyIntents: parsed.weeklyIntents ?? [],
       restRecords: parsed.restRecords ?? [],
+      masteryNodes: parsed.masteryNodes ?? [],
       quests: (parsed.quests ?? []).map((quest) => ({
         ...quest,
         restState: quest.restState ?? 'active',

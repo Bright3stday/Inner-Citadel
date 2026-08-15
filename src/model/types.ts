@@ -11,6 +11,7 @@ export type AppState = {
   dismissedPrompts: DismissedPrompt[]
   weeklyIntents: WeeklyIntent[]
   restRecords: RestRecord[] // The Inn — see RestRecord below
+  masteryNodes: MasteryNode[] // Mastery Tree skeleton — see MasteryNode below
   settings: Settings
   meta: {
     createdAt: string // ISO 8601
@@ -124,6 +125,29 @@ export type RecoveryQuestSet = {
   templates: RecoveryQuestTemplate[]
 }
 
+// Mastery Tree skeleton (see docs/decision-log-and-roadmap.md). A node
+// is a self-authored capability, not an activity — the app never
+// parses or judges `criteria`. Practice history (logging
+// contributingQuestIds) earns eligibility; unlocking is always a
+// deliberate act, never automatic. `unlockedAt` is the one genuinely
+// new stored fact — everything else about a node's current state
+// (locked/eligible/unlocked, practice count) is derived, same
+// discipline as the rest of this app. See core/mastery.ts.
+export type ThresholdUnit = 'quest completions' | 'weeks meeting target'
+
+export type MasteryNode = {
+  id: string
+  domainId: string
+  title: string // the capability, not the activity — self-authored
+  criteria: string // free text, self-authored, never parsed or judged
+  practiceThreshold: number
+  thresholdUnit: ThresholdUnit
+  contributingQuestIds: string[]
+  order: number
+  createdAt: string
+  unlockedAt: string | null // null until deliberately unlocked (spends GP)
+}
+
 export type Settings = {
   reflectionCharLimit: number
   weekStartsOn: 0 | 1 // 0=Sunday, 1=Monday
@@ -143,13 +167,30 @@ export type Settings = {
 
 export type SpireCondition = 'thriving' | 'steady' | 'crumbling'
 
+// Height is node-driven, not week-driven — see docs/decision-log-and-
+// roadmap.md, "Spire becomes node-driven". heightTier = mastery nodes
+// unlocked in this domain so far; unbounded, since it's now bounded by
+// nodes authored rather than a hardcoded week ladder. nextNode is the
+// domain's practice signal for the dead zone between unlocks — the
+// nearest still-LOCKED node (not merely "not unlocked" — an eligible
+// node has already stopped accumulating), with how much practice has
+// accumulated toward it. null if nothing is currently locked (every
+// remaining node is eligible or unlocked, or the domain has none yet).
 export type SpireHeight = {
-  heightWeeks: number // qualifying weeks, all-time. Monotonic.
-  heightTier: number // 0..5 — the render bucket for heightWeeks
+  heightTier: number
+  nextNode: { title: string; practiceCount: number; practiceThreshold: number } | null
 }
 
 export type DomainSpire = SpireHeight & {
   condition: SpireCondition
+}
+
+// Entirely derived — see core/growth.ts. Nothing about GP itself is
+// stored; only which nodes are unlocked (MasteryNode.unlockedAt) is.
+export type GrowthPoints = {
+  earned: number
+  spent: number
+  balance: number
 }
 
 export type QuestProgress = {

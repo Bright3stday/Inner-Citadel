@@ -13,10 +13,18 @@ export const THRIVING_STREAK_WEEKS = 2
  *  1.0 = must hit target exactly. Deferred for tuning after real use. */
 export const TARGET_MET_RATIO = 1.0
 
-/** heightWeeks thresholds that bump the render tier (0..5).
- *  A domain crosses into tier N once heightWeeks >= thresholds[N-1].
- *  Deferred for tuning after real use. */
-export const HEIGHT_TIER_THRESHOLDS = [1, 4, 12, 26, 52]
+/** GP earned per logged practice tap (one LogEntry row), regardless of
+ *  that entry's count value or which quest it's against — global, not
+ *  domain-scoped. A rough, deliberately uncalibrated rate: the
+ *  skeleton is testing whether "practice accrues something that
+ *  unlocks something" feels meaningful at all, not tuning the economy.
+ *  See docs/decision-log-and-roadmap.md, Mastery/GP section. */
+export const GP_PER_LOG = 1
+
+/** Flat GP cost to unlock any eligible mastery node. No tiered costs
+ *  or scarcity curve in the skeleton — a single sink, correct after
+ *  real use. */
+export const NODE_UNLOCK_COST = 15
 
 /** How many trailing days (today inclusive) count toward forgeHeat.
  *  A calibration guess, not a considered value — correct after real use. */

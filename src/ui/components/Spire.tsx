@@ -8,18 +8,22 @@ type Props = {
 
 type Segment = 'base' | 'window' | 'battlement'
 
-// The tower recipe per heightTier — bottom to top. Modular pieces
-// composed per tier rather than a bespoke sprite per tier×condition
-// combination (18 of them), per the earlier decision: keeps the
-// asset count bounded, and a new combination never needs new art.
-// Tier 0 has no recipe at all — same "bare plot" semantics as the
-// CSS-block placeholder this replaces.
-const TOWER_TIERS: Record<number, Segment[]> = {
-  1: ['base'],
-  2: ['base', 'window'],
-  3: ['base', 'window', 'base'],
-  4: ['base', 'window', 'base', 'window', 'battlement'],
-  5: ['base', 'window', 'base', 'window', 'base', 'window', 'battlement'],
+// The tower recipe per heightTier — bottom to top. heightTier is now
+// unlocked-mastery-node count (core/spire.ts), unbounded by design —
+// bounded by nodes authored, not a hardcoded week-count ceiling — so
+// this is a formula, not a hand-authored lookup table capped at 5.
+// One body segment per tier, alternating base/window starting at the
+// foot; a battlement caps every tier from 4 up. Tier 0 has no recipe
+// at all — same "bare plot" semantics as the CSS-block placeholder
+// this replaces.
+function buildTowerRecipe(tier: number): Segment[] {
+  if (tier <= 0) return []
+  const segments: Segment[] = []
+  for (let i = 0; i < tier; i++) {
+    segments.push(i % 2 === 0 ? 'base' : 'window')
+  }
+  if (tier >= 4) segments.push('battlement')
+  return segments
 }
 
 // Placeholder shapes only, same status as Forge.tsx — a hand-composed
@@ -42,7 +46,7 @@ const TOWER_TIERS: Record<number, Segment[]> = {
 // erased; the citadel shows evidence of repair instead. Still
 // greyscale — a texture, not a color.
 export function Spire({ domain, spire, hasRepaired = false }: Props) {
-  const recipe = TOWER_TIERS[spire.heightTier] ?? []
+  const recipe = buildTowerRecipe(spire.heightTier)
   const windowIndices = recipe
     .map((segment, i) => (segment === 'window' ? i : -1))
     .filter((i) => i >= 0)
@@ -91,8 +95,27 @@ export function Spire({ domain, spire, hasRepaired = false }: Props) {
       </div>
       <div className="spire-name">{domain.name}</div>
       <div className="spire-meta">
-        {spire.condition} · {spire.heightWeeks}w
+        {spire.condition} · {spire.heightTier} node{spire.heightTier === 1 ? '' : 's'}
       </div>
+      {spire.nextNode && (
+        // The dead-zone fix: this is meant to move most weeks, even
+        // between node unlocks — the thing the old week-count ladder
+        // had nothing to show between the Forge's 3-day window and a
+        // whole-week height bump. See docs/decision-log-and-roadmap.md.
+        <div className="spire-construction" title={spire.nextNode.title}>
+          <div className="spire-construction-bar">
+            <div
+              className="spire-construction-fill"
+              style={{
+                width: `${Math.min(100, (spire.nextNode.practiceCount / spire.nextNode.practiceThreshold) * 100)}%`,
+              }}
+            />
+          </div>
+          <div className="spire-construction-label">
+            {spire.nextNode.practiceCount} / {spire.nextNode.practiceThreshold}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,8 +1,9 @@
-import { HEIGHT_TIER_THRESHOLDS, THRIVING_STREAK_WEEKS } from './rules'
-import { completedWeeksSince, lastCompletedWeeks } from './dates'
+import { THRIVING_STREAK_WEEKS } from './rules'
+import { lastCompletedWeeks } from './dates'
 import { questMetInWeek } from './tally'
+import { getMasteryNodeViews } from './mastery'
 import { isNeglected } from './neglect'
-import type { Domain, DomainSpire, LogEntry, Quest, SpireCondition, SpireHeight } from '../model/types'
+import type { Domain, DomainSpire, LogEntry, MasteryNode, Quest, SpireCondition, SpireHeight } from '../model/types'
 
 function domainQuestsOf(domain: Domain, quests: Quest[]): Quest[] {
   return quests.filter((q) => q.domainId === domain.id) // includes retired
@@ -14,39 +15,40 @@ function domainHasAnyLog(domainQuests: Quest[], logs: LogEntry[]): boolean {
 }
 
 /**
- * Cumulative depth of practice. Monotonic — never decreases.
- * See docs/architecture.md §3, "Height rule".
+ * Height is node-driven: heightTier is simply how many mastery nodes
+ * this domain has unlocked so far — a real milestone, moving rarely.
+ * nextNode carries the practice signal that's supposed to move most
+ * weeks even between unlocks — the dead zone the old week-count ladder
+ * left between the Forge's 3-day window and a whole-week height bump.
+ * Unbounded on purpose: bounded by nodes authored, not a hardcoded
+ * tier ceiling. See docs/decision-log-and-roadmap.md, "Spire becomes
+ * node-driven".
+ *
+ * nextNode is specifically the nearest still-LOCKED node, not just
+ * "the next un-unlocked one" — an eligible node has already stopped
+ * accumulating (it's done, waiting on a deliberate unlock), so its
+ * numbers don't belong on a bar that's supposed to represent something
+ * still in motion. If every remaining node is eligible or unlocked,
+ * nextNode is null: there's genuinely nothing left "under
+ * construction," only something waiting on you.
  */
 export function deriveHeight(
   domain: Domain,
+  masteryNodes: MasteryNode[],
   quests: Quest[],
   logs: LogEntry[],
   today: string,
   weekStartsOn: 0 | 1,
 ): SpireHeight {
-  const domainQuests = domainQuestsOf(domain, quests)
-  const domainLogs = logs.filter((log) => domainQuests.some((q) => q.id === log.questId))
+  const nodeViews = getMasteryNodeViews(domain.id, masteryNodes, quests, logs, today, weekStartsOn)
 
-  if (domainLogs.length === 0) {
-    return { heightWeeks: 0, heightTier: 0 }
-  }
+  const heightTier = nodeViews.filter((view) => view.state === 'unlocked').length
+  const next = nodeViews.find((view) => view.state === 'locked') ?? null
+  const nextNode = next
+    ? { title: next.node.title, practiceCount: next.practiceCount, practiceThreshold: next.node.practiceThreshold }
+    : null
 
-  const firstLogDate = domainLogs.reduce(
-    (min, log) => (log.forDate < min ? log.forDate : min),
-    domainLogs[0].forDate,
-  )
-
-  const weeks = completedWeeksSince(firstLogDate, today, weekStartsOn)
-  // One quest meeting target is enough for a week to qualify — the
-  // looser bar (vs. the 'thriving' bar below) is what lets height and
-  // condition tell different stories. See docs/architecture.md §3.
-  const heightWeeks = weeks.filter((week) =>
-    domainQuests.some((quest) => questMetInWeek(quest, logs, week, today)),
-  ).length
-
-  const heightTier = HEIGHT_TIER_THRESHOLDS.filter((threshold) => heightWeeks >= threshold).length
-
-  return { heightWeeks, heightTier }
+  return { heightTier, nextNode }
 }
 
 /**
@@ -95,13 +97,14 @@ export function deriveCondition(
 
 export function deriveSpire(
   domain: Domain,
+  masteryNodes: MasteryNode[],
   quests: Quest[],
   logs: LogEntry[],
   today: string,
   weekStartsOn: 0 | 1,
 ): DomainSpire {
   return {
-    ...deriveHeight(domain, quests, logs, today, weekStartsOn),
+    ...deriveHeight(domain, masteryNodes, quests, logs, today, weekStartsOn),
     condition: deriveCondition(domain, quests, logs, today, weekStartsOn),
   }
 }

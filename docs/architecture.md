@@ -232,8 +232,12 @@ These shapes are produced by `core/` and consumed by `ui/`. They live in `model/
 type SpireCondition = 'thriving' | 'steady' | 'crumbling'
 
 type SpireHeight = {
-  heightWeeks: number            // qualifying weeks, all-time. Monotonic.
-  heightTier: number             // 0..5 — the render bucket for heightWeeks
+  heightTier: number             // mastery nodes unlocked in this domain. Unbounded.
+  nextNode: {                    // the nearest still-LOCKED node (not merely un-unlocked), for construction-progress display
+    title: string
+    practiceCount: number
+    practiceThreshold: number
+  } | null
 }
 
 type DomainSpire = SpireHeight & {
@@ -241,7 +245,7 @@ type DomainSpire = SpireHeight & {
 }
 ```
 
-`heightWeeks` is the honest record; `heightTier` is the rendering bucket derived from it via `rules.HEIGHT_TIER_THRESHOLDS`. Keeping both means `ui/components/Spire.tsx` never does arithmetic — it receives a tier and picks a sprite — while the underlying number stays inspectable when a tier looks wrong.
+**Superseded — height is now node-driven, not week-driven.** `heightTier` used to be a rendering bucket derived from `heightWeeks` (qualifying weeks, all-time) via `rules.HEIGHT_TIER_THRESHOLDS`. As of the Mastery Tree / Growth Points skeleton (see `docs/decision-log-and-roadmap.md`, "Mastery, Growth Points, Inn"), `heightTier` is simply the count of unlocked `MasteryNode`s in the domain — unbounded, since it's now limited by nodes authored rather than a hardcoded constant. The old week-counting logic didn't disappear; it's reused inside `core/mastery.ts` as one of two ways to count practice toward a node's threshold. `nextNode` is new: the practice-progress signal meant to move most weeks even between node unlocks, closing the dead zone the old system left between the Forge's 3-day window and a whole-week height bump.
 
 If either of these ever acquires a matching field on a stored entity, something has gone wrong. See §5(b).
 
@@ -266,10 +270,16 @@ export const THRIVING_STREAK_WEEKS = 2
  *  1.0 = must hit target exactly. */
 export const TARGET_MET_RATIO = 1.0
 
-/** heightWeeks values at which the spire gains a visible tier.
- *  heightTier = how many of these are ≤ heightWeeks, so 0..5. */
-export const HEIGHT_TIER_THRESHOLDS = [1, 4, 12, 26, 52]
+/** GP earned per logged practice tap, flat and global. A calibration
+ *  guess — see the Mastery/GP skeleton in decision-log-and-roadmap.md. */
+export const GP_PER_LOG = 1
+
+/** Flat GP cost to unlock any eligible mastery node. The only sink in
+ *  the skeleton — no tiered costs yet. */
+export const NODE_UNLOCK_COST = 15
 ```
+
+`HEIGHT_TIER_THRESHOLDS` (the old week-count ladder that used to set `heightTier`) was removed when height became node-driven — see §2.8 and the Height rule below.
 
 ### The spire is two values, not one
 
@@ -284,28 +294,30 @@ Both remain fully derived. No new stored state was introduced to make this work.
 
 ### Height rule
 
-`core/spire.ts` → `deriveHeight()`:
+**Superseded — see `docs/decision-log-and-roadmap.md`, "Mastery, Growth Points, Inn," for the full rationale.** `core/spire.ts` → `deriveHeight()` is now node-driven:
 
 ```
-deriveHeight(domain, quests, logs, today) → { heightWeeks, heightTier }
+deriveHeight(domain, masteryNodes, quests, logs, today, weekStartsOn)
+  → { heightTier, nextNode }
 
-  Consider every COMPLETED calendar week from the domain's first
-  log entry through the most recent completed week.
-
-  A week qualifies if ≥1 quest in the domain met its target during it.
-  Retired quests count — past practice is still past practice.
-
-  heightWeeks = number of qualifying weeks. Monotonic: never decreases.
-  heightTier  = count of HEIGHT_TIER_THRESHOLDS entries ≤ heightWeeks
+  heightTier = count of this domain's MasteryNodes with unlockedAt set.
+  nextNode   = the nearest still-LOCKED node (by author order), with
+               its current practice count — null if nothing is
+               currently locked (everything remaining is eligible or
+               unlocked, or none exist yet).
 ```
 
-Three deliberate choices here:
+**Correction, found by generating a realistic multi-node example and looking at what it actually showed, not by the original tests:** the first version picked "the first non-`unlocked` node in order," which included eligible nodes — so an eligible node's frozen count could sit on a bar that's supposed to represent something still in motion. Eligible means "done, waiting on a deliberate unlock," not "still accumulating." The original unit tests only ever exercised a single-node domain, where "not unlocked" and "locked" happen to coincide, so the bug was invisible to them until a mixed locked/eligible domain surfaced it.
 
-**One quest is enough for a week to qualify.** Not *every* quest — that is the bar for `thriving`, and reusing it would mean a domain holding five quests almost never gains height, with each newly added quest silently stalling growth. The looser bar is what lets the two axes tell different stories.
+The old week-counting approach (every completed week since the domain's first log; a week "qualifies" if ≥1 quest met target that week) didn't disappear — `core/mastery.ts` → `practiceCountForNode` reuses exactly that idea as one of two ways (`'weeks meeting target'`) to count a node's practice, now feeding node eligibility instead of height directly. The other counting style, `'quest completions'`, is new: a raw count of logged taps against a node's contributing quests.
 
-**Height never decreases.** You did practice those weeks; that is a fact about the past and the spire is a record of what was practiced. All recency signal lives in `condition`. The practical benefit when debugging: a height that went *down* is unambiguously a bug, never a tuning question.
+What the three old deliberate choices become under the new rule:
 
-**Only completed weeks count.** Same boundary as the neglect rule, and it means the skyline does not shift mid-week — height changes on Monday or not at all.
+**Height never decreases.** Still true, now for a different reason: unlocking a node is a one-way stored fact (`MasteryNode.unlockedAt`), never revoked by this app. A height that went *down* is still unambiguously a bug.
+
+**Only completed weeks count** — still true for the `'weeks meeting target'` counting style; `'quest completions'` counts all-time, not week-bounded, since it's a raw tap count.
+
+**"One quest is enough" vs. "every quest"** — this distinction now lives at the node level, in which quests the author chose as `contributingQuestIds`, not in a domain-wide qualifying rule.
 
 ### Condition rule
 
@@ -346,24 +358,24 @@ The spec's intent is preserved. What it lacked was a way to say "tall *and* crum
 
 ### Render combinations
 
-`ui/components/Spire.tsx` receives `{ heightTier, condition }` and picks a sprite. The pairs that matter:
+`ui/components/Spire.tsx` receives `{ heightTier, condition }` and picks a sprite. `heightTier` is unbounded now (node-driven, see above), so the table below uses illustrative tiers rather than an exhaustive 0–5 range — `ui/components/Spire.tsx` → `buildTowerRecipe(tier)` is a formula, not a lookup table, and scales past any of these:
 
 | heightTier | condition | Reads as |
 |---|---|---|
-| 0 | `steady` | Bare plot. Never practiced. |
+| 0 | `steady` | Bare plot. No mastery nodes unlocked yet. |
 | 1–2 | `steady` | Low structure, scaffolding up. |
 | 1–2 | `thriving` | Low structure, actively building. |
-| 3–5 | `thriving` | Tall and well-kept. |
-| 3–5 | `crumbling` | **Tall and visibly weathering** — built, then lapsed. |
+| 3+ | `thriving` | Tall and well-kept, growing without a ceiling. |
+| 3+ | `crumbling` | **Tall and visibly weathering** — built, then lapsed. |
 | 0 | `crumbling` | Rare, not strictly unreachable — see note below. |
 
 The first and last-reachable rows are the entire reason for this design. They must not look alike.
 
 **0-height crumbling is now rare rather than impossible.** It was briefly *believed* unreachable (condition rule 1 alone), until real use surfaced the gap that decision 8 in §9 fixes. After that fix it's still technically reachable one way: a domain that logged *some* activity in a completed week — never enough to hit any quest's target, so no height accrued — and then went fully silent in the most recent `NEGLECT_WEEKS`. That's a domain with genuine (if unproductive) history that then lapsed, which is arguably still an honest thing for `crumbling` to say. See the open question in §9 about whether "neglected" should mean *zero logged activity* (current behavior) or *zero quests actually completed*, which is closer to spec §7's literal wording.
 
-**Provisional, and isolated on purpose:** the `thriving` rule is a stand-in. Spec §4 ties this notion to proximity to a *mastery threshold*, and Mastery Tree depth is deferred (spec §9). When it arrives, rule 3 is the only line that changes — see §7.
+**Provisional, and isolated on purpose:** the `thriving` rule is a stand-in. Spec §4 ties this notion to proximity to a *mastery threshold*, and full Mastery Tree topology (node dependencies, branching) is still deferred past the skeleton (see `docs/decision-log-and-roadmap.md`). `deriveCondition` rule 3 is untouched by the skeleton — it's still the week-count stand-in, not yet wired to node state.
 
-**Performance note.** `deriveHeight` scans all history for each domain on every render. Realistically that is ~9,000 log entries across ~6 domains, comfortably sub-millisecond, so no memoization is being built. If it ever does matter, the fix is to memoize on `logEntries.length` — do that when a profiler says to, not before.
+**Performance note.** `deriveHeight` (now via `core/mastery.ts` → `getMasteryNodeViews`) still scans log history for each domain's nodes on every render. Same order of magnitude as before, same conclusion: no memoization built, correct if a profiler ever says to.
 
 ### Neglect rule
 
@@ -463,7 +475,7 @@ inner-citadel/
 | `core/rules.ts` | Hold every tunable threshold as a named constant. |
 | `core/dates.ts` | Convert between dates, day keys, week keys, and week ranges. |
 | `core/tally.ts` | Compute one quest's progress within its current window. |
-| `core/spire.ts` | Derive one domain's spire height and condition (`deriveHeight`, `deriveCondition`, `deriveSpire`). |
+| `core/spire.ts` | Derive one domain's spire height and condition (`deriveHeight`, `deriveCondition`, `deriveSpire`). Height is node-driven as of the Mastery/GP skeleton — see `core/mastery.ts` and `docs/decision-log-and-roadmap.md`. |
 | `core/neglect.ts` | Decide whether a domain has gone untouched for two completed weeks. |
 | `core/selectors.ts` | Assemble the above into the exact objects each view renders. |
 | `actions/logActions.ts` | Add or remove a contribution. |
@@ -557,25 +569,30 @@ Four modules legitimately span boundaries. These are where bugs will be hardest 
 2. ui/views/CitadelView.tsx calls core/selectors.ts → getCitadelView(state, today)
 
 3. For each non-archived Domain, selectors calls
-   core/spire.ts → deriveSpire(domain, quests, logs, today)
+   core/spire.ts → deriveSpire(domain, masteryNodes, quests, logs, today, weekStartsOn)
 
 4. deriveSpire calls its two halves independently:
 
-   a. deriveHeight  — walks every completed week since the domain's
-      first log, asking core/tally.ts whether ≥1 quest met its target
-      in that week. Returns { heightWeeks, heightTier }.
+   a. deriveHeight  — calls core/mastery.ts → getMasteryNodeViews for
+      this domain's nodes; heightTier is the count with unlockedAt
+      set, nextNode is the nearest still-LOCKED one (not merely
+      un-unlocked — see §3's correction note) with its current
+      practice count. Returns { heightTier, nextNode }. (Superseded
+      from the original week-count walk — see §2.8 and §3.)
 
    b. deriveCondition — evaluates the four ordered rules in §3,
       calling core/neglect.ts for rule 2 and core/tally.ts for rule 3.
-      Returns 'thriving' | 'steady' | 'crumbling'.
+      Returns 'thriving' | 'steady' | 'crumbling'. Untouched by the
+      Mastery/GP skeleton.
 
-5. ui/components/Spire.tsx receives { heightTier, condition } and
-   renders the matching pixel-art sprite (§3, render combinations).
+5. ui/components/Spire.tsx receives { heightTier, nextNode, condition }
+   and renders the matching pixel-art sprite (§3, render combinations)
+   plus a construction-progress bar driven by nextNode.
 ```
 
 **The two halves never consult each other.** `deriveHeight` does not know what `condition` is, and `deriveCondition` does not know how tall the spire is. That independence is what makes "tall and crumbling" expressible, and it means a wrong sprite is always traceable to one of the two functions rather than to an interaction between them.
 
-**Different change rhythms, worth knowing when something looks frozen:** `heightWeeks` counts only completed weeks, so it can change *only* at a week boundary — a spire that hasn't grown mid-week is behaving correctly. `condition` is also computed over completed weeks and so moves on the same boundary, but it can move in either direction, and rule 1 means it stays `steady` until the domain's first log entry exists.
+**Different change rhythms, worth knowing when something looks frozen:** `heightTier` now only moves when a node is deliberately unlocked — a real, infrequent event, not a boundary. `nextNode.practiceCount` moves as often as contributing quests get logged, which is the point (see §2.8). `condition` is computed over completed weeks and moves on that boundary, in either direction, and rule 1 means it stays `steady` until the domain's first log entry exists.
 
 **Consequence for debugging:** a spire can never be "stuck," because nothing was stored to get stuck. If a spire looks wrong, one of the two functions is returning the wrong answer for the current data, and you can verify which in one console call each. There is no history to audit and no transition log to reconstruct.
 
@@ -687,13 +704,8 @@ Per spec §10, this is the backup story. There is no sync.
 
 These are deferred per spec §9. Nothing below gets designed or built now. The point of this section is only to confirm that today's structure doesn't have to be torn up to accommodate them later.
 
-**Growth Points** (spec §9)
-Because `logEntries` is the append-only source of truth and no derived value is stored, GP *earnings* are computable from history retroactively — including for logs recorded before GP exists. A new `core/growth.ts` would compute earned points; the only genuinely new stored state is *spending* (a `growthSpends` array), since a spend is a choice and not reconstructable. That is one new array on `AppState` and one new `core/` module. Nothing existing changes.
-*The one thing to watch:* GP would make log history economically meaningful, which weakens the "corrections are hard deletions" decision in §2.4. If GP is built, revisit that choice then — not now.
-
-**Mastery Tree depth** (spec §9)
-`Domain` gains a `nodes` field; a new `core/mastery.ts` computes node progress. The connection to today's code is exactly one branch: rule 3 in `deriveCondition` currently asks "did every active quest meet target for N weeks" and would instead ask `mastery.isThresholdReached(domain, ...)`. That one line is the entire integration surface, which is why §3 flags it as provisional and keeps it isolated.
-*Second, smaller hook:* `HEIGHT_TIER_THRESHOLDS` is a plain week-count ladder today. If mastery nodes should drive tier instead, `deriveHeight`'s last line changes and `deriveCondition` is untouched — the two axes stay independently replaceable.
+**Growth Points and Mastery Tree depth (spec §9) — skeleton built.** Both predictions above played out largely as sketched, with one correction: `core/growth.ts` (`deriveGrowthPoints`) and `core/mastery.ts` were built as anticipated, and `deriveHeight`'s last line did change as the "second, smaller hook" predicted — `heightTier` is now unlocked-node count, not a `HEIGHT_TIER_THRESHOLDS` week ladder (that constant is gone from `core/rules.ts`). What didn't happen as sketched: the anticipated `growthSpends` array was never needed. With a single flat unlock cost and nodes as the only spend target, `MasteryNode.unlockedAt` alone is sufficient to derive GP spent (count of unlocked nodes × the flat cost) — one field on an already-new entity, not a second array. `deriveCondition` rule 3 (the `thriving` stand-in this section predicted mastery nodes would eventually replace) is still untouched — that's still real Mastery Tree topology (dependencies, thresholds beyond a flat list), explicitly deferred past this skeleton. Full rationale, what's in vs. out of the skeleton, and the "GP can never affect condition display" constraint: `docs/decision-log-and-roadmap.md`, "Mastery, Growth Points, Inn."
+*The one thing flagged to watch:* GP making log history economically meaningful, weakening "corrections are hard deletions" (§2.4) — still an open watch-item, not yet revisited, since the skeleton doesn't touch log-entry correction/deletion at all.
 
 **Sentinel Mode** (spec §9, §10)
 Requires native Android APIs, so it arrives with a Capacitor shell wrapping this same PWA. Architecturally it is a *new source of data*, not a change to existing flows — a `sentinel/` module producing its own entity type, kept out of `logEntries` since it isn't a quest contribution. The relevant protection today is that `storage.ts` is the single `localStorage` boundary: if the native shell needs a different persistence backend, one module changes and nothing above it notices.
@@ -724,8 +736,10 @@ The section to read first when something is wrong.
 | **Quest won't save / log disappears on reload** | `storage/storage.ts` — is `save()` being called and is it throwing? Then `state/useAppState.ts` — did `apply()` actually call `setState`? | DevTools → Application → Local Storage → `innerCitadel.v1`. Is the entry in `logEntries`? If yes, it saved and the bug is in display. If no, it never got written. |
 | **Progress number is wrong** | `core/tally.ts` first, `core/dates.ts` second. The window range is the usual culprit. | Console: `questProgress(quest, state.logEntries, todayKey())`. Then check `weekRange(todayKey())` returns the dates you expect. |
 | **Contribution counted toward the wrong day or week** | `core/dates.ts`, and the `forDate` on the entry. | Read the raw entry's `forDate` vs `loggedAt`. If `forDate` is right but the tally is wrong, it's `dates.ts`. If `forDate` itself is wrong, it's whoever built the payload in `ui/`. |
-| **Spire is the wrong height** | `core/spire.ts` → `deriveHeight`. Usually the per-week qualifying set: remember ≥1 quest is enough, retired quests count, and the in-progress week never counts. | Console: `deriveHeight(domain, quests, logs, todayKey())`. Compare `heightWeeks` against `HEIGHT_TIER_THRESHOLDS` by hand to see whether the bug is the count or the tier mapping. |
-| **Spire height went *down*** | Always a bug, never tuning — height is monotonic by design (§3). Look for a filter in `deriveHeight` that reads recent weeks, or a quest whose `retiredAt` is excluding it from the historical scan. | Console: re-run `deriveHeight` and check whether the qualifying-week count dropped or only the tier did. |
+| **Spire is the wrong height** | `core/spire.ts` → `deriveHeight`, now node-driven (§2.8, §3). Usually either the wrong nodes are unlocked, or `core/mastery.ts` → `practiceCountForNode` is miscounting for a node's `thresholdUnit`. | Console: `deriveHeight(domain, masteryNodes, quests, logs, todayKey(), weekStartsOn)`. Cross-check `nextNode.practiceCount` against `getMasteryNodeViews` for the domain to see whether the bug is the practice count or which nodes are unlocked. |
+| **Spire height went *down*** | Always a bug, never tuning — height is monotonic by design (§3): a node, once unlocked, can't be un-unlocked by this app. Look for something clearing `MasteryNode.unlockedAt`, or a node that got deleted (only ever offered pre-unlock, per `actions/masteryActions.ts`). | Console: re-run `deriveHeight` and check the domain's `masteryNodes` array directly for a missing or reset `unlockedAt`. |
+| **Growth Points balance looks wrong** | `core/growth.ts` → `deriveGrowthPoints`. Fully derived: earned = `logEntries.length * GP_PER_LOG`, spent = unlocked-node count × `NODE_UNLOCK_COST`. | Console: `deriveGrowthPoints(state.logEntries, state.masteryNodes)`. If `earned` looks wrong, the bug is log count, not GP logic. If `spent` looks wrong, count `masteryNodes.filter(n => n.unlockedAt)` by hand. |
+| **Mastery node stuck in the wrong state** | `core/mastery.ts` → `deriveNodeState`. `unlockedAt` set always wins; otherwise it's a threshold comparison against `practiceCountForNode`. | Console: `getMasteryNodeViews(domainId, state.masteryNodes, state.quests, state.logEntries, todayKey(), weekStartsOn)` and check `practiceCount` against the node's own `practiceThreshold`. |
 | **Spire condition is wrong** | `core/spire.ts` → `deriveCondition`. Check the four rules **in order** — neglect beats thriving — and check both guards are intact (rule 1's "no logs ever", rule 3's "≥1 active quest"). | Console: `deriveCondition(domain, quests, logs, todayKey())`. Nothing is stored, so what this returns *is* what renders. |
 | **Brand-new domain renders as crumbling** | Condition rule 1 was removed or bypassed. A new domain trips the neglect rule exactly like an abandoned one. | Check the domain has zero `logEntries` and confirm rule 1 fires before rule 2. |
 | **Domain with no quests renders as thriving** | Rule 3's "≥1 active quest" guard is missing — "every quest in an empty set met its target" is vacuously `true`. | Count active (non-retired) quests for the domain; if zero, rule 3 must not be reachable. |
@@ -738,7 +752,7 @@ The section to read first when something is wrong.
 
 **Two habits that make the above faster:**
 
-`dev/DebugPanel.tsx` shows the raw stored document alongside recomputed derived values (each spire's `heightWeeks` / `heightTier` / `condition`, each quest tally, current neglect list). When display and data disagree, this tells you which side is lying, immediately. Showing `heightWeeks` next to `heightTier` matters — most "wrong height" reports are a tier-mapping problem, not a counting problem, and seeing both at once separates them instantly.
+`dev/DebugPanel.tsx` shows the raw stored document alongside recomputed derived values (each spire's `heightTier` / `nextNode` / `condition`, each quest tally, current neglect list). When display and data disagree, this tells you which side is lying, immediately. If it hasn't been updated to show mastery node state and GP balance since the skeleton landed, that's a gap worth closing — `getMasteryNodeViews` and `deriveGrowthPoints` are exactly the kind of recomputed-values-next-to-raw-state view this panel exists for.
 
 Expose `window.__ic = { state, core, actions }` in dev builds. Every rule in this app is a pure function, so the console is a genuine debugging tool — you can call any rule against your real data without touching the UI.
 
@@ -755,15 +769,19 @@ These were open questions in the first draft. All are now settled. They are kept
 | 3 | `TARGET_MET_RATIO` | **Stays 1.0** — a quest counts as met only at 100% of target. Deferred for tuning after real use. | `core/rules.ts` |
 | 4 | Day-window quests inside weekly rules | For `window: 'day'`, "met its target that week" means **the target was hit on every day the quest was active** that week. Deferred for tuning after real use. | `core/tally.ts` |
 | 5 | Retired quests | Count toward **neglect** and **height** (past practice is still past practice); excluded from **`thriving`** credit (you can't be judged on a quest you retired). Asymmetry confirmed. | §3, both rules |
-| 6 | What makes a week count toward height | **≥1 quest in the domain met its target.** Not every quest — that is the `thriving` bar, and reusing it would stall height for multi-quest domains. | §3, height rule |
-| 7 | Does height ever decrease | **No — strictly monotonic.** All recency signal lives in `condition`. A height decrease is therefore always a bug, never tuning. | §3, height rule |
+| 6 | What makes a week count toward height | **Superseded.** The original rule (≥1 quest in the domain met its target that week) no longer drives height directly — it lives on as one of two practice-counting styles a mastery node can choose (`'weeks meeting target'`, `core/mastery.ts`). | §2.8, §3, §7 |
+| 7 | Does height ever decrease | **No — strictly monotonic**, now for a different underlying reason: height is unlocked-node count, and this app never clears `MasteryNode.unlockedAt`. | §3, height rule |
 | 8 | Bug: a domain touched for the first time today read as `crumbling` | **Fixed.** `isNeglected` excludes the current in-progress week from its sum (correctly), but had no floor requiring any completed week to exist first — so a domain with no history yet summed to zero for the same reason genuine abandonment does. Found via real use: two domains with identical (zero) completed-week history rendered as `steady` and `crumbling` respectively, depending only on whether either had ever been logged into during the current week. Guard now lives inside `isNeglected` itself. | `core/neglect.ts`, §3 Neglect rule |
+| 9 | Height rule redefined: node-driven instead of week-driven | **Changed, not just decided.** See §2.8, §3, and `docs/decision-log-and-roadmap.md` for the full "Spire becomes node-driven" rationale — a direct response to real-use feedback that progress felt too slow to notice. Existing domains with practice history but no authored mastery nodes yet show a bare plot until nodes exist, an accepted visible consequence. | §2.8, §3, §7 |
+| 10 | Bug: GP balance could go negative | **Fixed during this skeleton's own verification pass**, not found later in UAT. The Unlock action initially fired on eligibility alone; testing surfaced that this let GP balance go negative, since nothing actually gated it on affordability. Fixed by disabling the Unlock control in the UI until `balance >= NODE_UNLOCK_COST`, with a "needs N more GP" readout while short. | `ui/views/DomainView.tsx` |
+| 11 | Bug: `nextNode` could surface an eligible node, not just a locked one | **Fixed**, found by generating a realistic multi-node example rather than by the (single-node-only) unit tests. `deriveHeight` now specifically finds the nearest `'locked'` node; if nothing remains locked, `nextNode` is `null` rather than showing an eligible node's frozen count on a bar meant to represent motion. | §2.8, §3, `core/spire.ts` |
+| 12 | Node list layout: full stack vs. compact path | **Compact horizontal path, not a full expanded stack.** A domain with several nodes made the original always-expanded vertical list require real scrolling — made worse, not better, by engagement being the whole point. Rebuilt as `ui/components/MasteryTree.tsx`: small ordered markers on a connecting line, styled by state, tap-to-select with only one node's full detail shown at a time. Presentation only — the underlying data is still the flat ordered list decision 9 describes, no dependencies or topology added. | `ui/components/MasteryTree.tsx` |
 
-**Three constants are explicitly deferred for tuning after real use**, not left undecided by oversight: `TARGET_MET_RATIO`, `HEIGHT_TIER_THRESHOLDS`, and the day-window interpretation in decision 4. Each is a single named value in `core/rules.ts` or one function in `core/tally.ts`, so revisiting any of them is a one-line change. Per spec §11, real usage is what should validate or overturn them — not further design work now.
+**Constants explicitly deferred for tuning after real use**, not left undecided by oversight: `TARGET_MET_RATIO`, the day-window interpretation in decision 4, and — new with the Mastery/GP skeleton — `GP_PER_LOG` and `NODE_UNLOCK_COST`. Each is a single named value in `core/rules.ts` or one function in `core/tally.ts`, so revisiting any of them is a one-line change. `HEIGHT_TIER_THRESHOLDS` no longer exists — removed when height became node-driven (decision 9), not merely deferred. Per spec §11, real usage is what should validate or overturn the remaining ones — not further design work now.
 
 ### Still genuinely open
 
-**The `thriving` rule is provisional.** Spec §4 ties this notion to proximity to a *mastery threshold*, and Mastery Tree depth is deferred (spec §9). The current rule is a stand-in that produces sensible behavior today, isolated to one branch of one function so that when Mastery Trees arrive, exactly one line changes. See §7.
+**The `thriving` rule is provisional.** Spec §4 ties this notion to proximity to a *mastery threshold*. Mastery nodes now exist (decision 9), but `deriveCondition` rule 3 is still the original week-count stand-in — full Mastery Tree topology (dependencies, thresholds beyond a flat per-domain list) is still deferred past the skeleton, same as before. The rule is isolated to one branch of one function so that when that topology arrives, exactly one line changes. See §7.
 
 **Does "neglected" mean zero logged activity, or zero quests actually completed?** `isNeglected` currently sums raw `LogEntry.count` in the completed-weeks window — *any* logged effort, even far under target every time, counts as "not neglected." Spec §7's own wording is narrower: "zero contributing quests **completed** across two consecutive weekly planning cycles." Under the current code, a domain logged into weekly but never once hitting a target would never trigger the neglect prompt; under the spec's literal wording, it might should. Not changed as part of decision 8's fix — that was a clear bug with one obvious correct answer, this is a genuine design choice between two defensible readings, and conflating the two risks fixing a bug by accident redefining a rule nobody asked to redefine.
 
