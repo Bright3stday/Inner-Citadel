@@ -1,10 +1,10 @@
-// Two more prompts in the same copy-paste-only library as
-// questGeneratorPrompt.ts, both domain-specific so they need real
-// data — built here at copy time rather than stored as static text.
-// Still no AI calls from this app.
+// Prompts in the same copy-paste-only library as questGeneratorPrompt.ts,
+// domain-specific so they need real data — built here at copy time
+// rather than stored as static text. Still no AI calls from this app.
 
 import { getQuestMonthlyBreakdown } from '../core/selectors'
 import { todayKey } from '../core/dates'
+import { MASTERY_NODE_PROMPT } from './masteryNodePrompt'
 import type { AppState, Domain, Quest } from '../model/types'
 
 const RECALIBRATE_LOOKBACK_MONTHS = 3
@@ -61,4 +61,24 @@ export function buildStrategiesPrompt(domain: Domain, quests: Quest[]): string {
 ${lines.join('\n')}
 
 I'm not looking to change the targets — I want practical strategies for actually staying consistent with these as they are. Concrete tactics, environmental tweaks, or habit-stacking ideas grounded in how real practice actually sticks for this kind of thing, not generic productivity advice.`
+}
+
+/**
+ * Mastery node prompt + this domain's current quests appended, so
+ * Step 1's Q2 ("paste of my current quests") is already answered by
+ * the time this lands in a conversation — the prompt's own preamble
+ * already says to skip anything already answered. The prompt text
+ * itself (masteryNodePrompt.ts) stays untouched and reusable
+ * elsewhere; this only appends real data at copy time, same pattern
+ * as the two prompts above.
+ */
+export function buildMasteryNodePrompt(domain: Domain, quests: Quest[]): string {
+  if (quests.length === 0) return MASTERY_NODE_PROMPT
+
+  const lines = quests.map(questLine)
+  return `${MASTERY_NODE_PROMPT}
+
+My current quests for "${domain.name}", so you don't need to ask:
+
+${lines.join('\n')}`
 }

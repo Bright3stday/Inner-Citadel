@@ -13,8 +13,7 @@ import { MasteryTree } from '../components/MasteryTree'
 import { CopyTextButton } from '../components/CopyTextButton'
 import { LogEntryList } from '../components/LogEntryList'
 import { QUEST_GENERATOR_PROMPT } from '../questGeneratorPrompt'
-import { MASTERY_NODE_PROMPT } from '../masteryNodePrompt'
-import { buildRecalibratePrompt, buildStrategiesPrompt } from '../domainPromptBuilders'
+import { buildMasteryNodePrompt, buildRecalibratePrompt, buildStrategiesPrompt } from '../domainPromptBuilders'
 import type { AppState, Domain, DomainSpire, MasteryNode, Quest } from '../../model/types'
 import type { Apply } from '../../state/useAppState'
 
@@ -241,7 +240,7 @@ export function DomainView({ state, apply, domain, spire, onBack }: Props) {
               </button>
             </div>
             <div className="quest-editor-actions">
-              <CopyTextButton label="Copy mastery node prompt" getText={() => MASTERY_NODE_PROMPT} />
+              <CopyTextButton label="Copy mastery node prompt" getText={() => buildMasteryNodePrompt(domain, quests)} />
             </div>
             <p className="settings-hint">Paste into any capable AI. Copy-paste only — no AI calls in-app.</p>
           </>

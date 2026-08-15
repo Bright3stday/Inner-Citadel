@@ -5,8 +5,9 @@ import { DailyView } from './ui/views/DailyView'
 import { CitadelView } from './ui/views/CitadelView'
 import { SettingsView } from './ui/views/SettingsView'
 import { WeeklyReviewView } from './ui/views/WeeklyReviewView'
+import { GuideView } from './ui/views/GuideView'
 
-type Tab = 'daily' | 'citadel' | 'review' | 'settings'
+type Tab = 'daily' | 'citadel' | 'review' | 'settings' | 'guide'
 
 // Holds the state hook and decides which view is on screen.
 // Routing only — no rules belong here.
@@ -16,11 +17,15 @@ type Tab = 'daily' | 'citadel' | 'review' | 'settings'
 // On a narrow screen exactly one panel shows, chosen by the active tab —
 // same as before. On a wide screen, Daily and Citadel show side by side
 // regardless of tab (same components, more room, not a different app);
-// Settings still takes over the full view when selected. No JS viewport
-// detection — the breakpoint lives in one place, the stylesheet.
+// Settings and Guide still take over the full view when selected. No JS
+// viewport detection — the breakpoint lives in one place, the stylesheet.
 export function App() {
   const { state, apply } = useAppState()
-  const [tab, setTab] = useState<Tab>('daily')
+  // A brand-new install (no domains yet) lands on the Guide tab instead
+  // of an empty Today screen — the closest thing to onboarding this app
+  // has, without a separate scripted first-run flow. Anyone who already
+  // has domains lands on Today as before.
+  const [tab, setTab] = useState<Tab>(() => (state.domains.length === 0 ? 'guide' : 'daily'))
   useWeeklyReminder(state, apply)
 
   return (
@@ -54,6 +59,13 @@ export function App() {
         >
           Settings
         </button>
+        <button
+          type="button"
+          className={tab === 'guide' ? 'tab-active' : ''}
+          onClick={() => setTab('guide')}
+        >
+          Guide
+        </button>
       </nav>
 
       <main className="main">
@@ -68,6 +80,9 @@ export function App() {
         </section>
         <section className="panel panel-settings">
           <SettingsView state={state} apply={apply} />
+        </section>
+        <section className="panel panel-guide">
+          <GuideView />
         </section>
       </main>
     </div>

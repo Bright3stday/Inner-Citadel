@@ -62,7 +62,8 @@ Organized by theme, showing what was decided, what it replaced, and why — so a
 - **Today view structure — resolved.** Quests are grouped under visible domain headers without requiring a tap-through, per the original recommendation — preserves low-friction daily logging while fixing the "wall of cards" feel that showed up as the quest list grew.
 
 ## Onboarding
-- Deferred in build order, but deliberately not treated as a non-issue — even as the sole user, a symbolic first-run moment marking the start of the practice is wanted, and it's the natural home for the identity/future-self mechanic (Peterson's self-authoring — the person being built toward, and the one being avoided) to get its first concrete UI moment rather than staying pure philosophy.
+- **A standing reference guide — built.** Triggered by a practical need, not by reaching this in build order: other people were about to start testing the app and had no way to learn what any of it meant. Built as a "Guide" tab (`ui/views/GuideView.tsx`) rather than a scripted first-run flow — collapsible sections (`<details>`/`<summary>`, no new state needed) covering domains/quests, Today/Forge, the Citadel/spires, mastery nodes/GP, the Inn, Review/Trends, and Settings. Reachable any time, not just once. The one first-run behavior it does have: `App.tsx` picks the Guide tab as the initial tab specifically when `domains.length === 0`, so a brand-new install lands there instead of an empty Today screen; anyone with existing domains still lands on Today as before.
+- **Explicitly not built here:** the identity/future-self mechanic (Peterson's self-authoring — the person being built toward, and the one being avoided) that was the original vision for this moment. What shipped is the practical "here's what things mean" half; the symbolic/identity-anchor half is still open, and worth its own pass rather than being folded into a reference doc that people will skim once and move past.
 
 ## AI Quest Generator, and the prompt library it grew into
 - Scoped from the start as a **scaffolding tool**, not a content engine — helps author quests, doesn't generate an app's worth of content unsupervised.
@@ -109,10 +110,12 @@ Organized by theme, showing what was decided, what it replaced, and why — so a
 - Week-boundary setting — `Settings.weekStartsOn` (Monday/Sunday) now actually wired through the date math, not just present in the data model; a Settings UI control for it — see Decision Log.
 - Scheduled day/time reminder for the weekly ritual — best-effort Notification API, checked on open/focus/every-minute-while-open, no server involved — see Decision Log.
 - Mastery Tree + Growth Points — **skeleton**, not the full system: node-driven spire height, a construction-progress signal on the skyline, self-authored nodes (manual or AI-assisted paste-import) with a locked/eligible/unlocked lifecycle, and a fully-derived GP balance with one spend (unlocking). Flat ordered node lists, one flat unlock cost, global (not domain-scoped) GP — see Decision Log for the full rationale and what's deliberately out of scope.
+- "Copy mastery node prompt" now auto-appends the domain's real current quests (title, target, window, methods) to the copied text, so the prompt's own Step 1 Q2 ("paste your current quests") is already answered — same copy-time-composition pattern as the recalibrate/strategies prompts.
+- Standing reference Guide — a "Guide" tab covering every screen and mechanic, reachable any time; a brand-new install (no domains yet) lands there instead of an empty Today screen — see Decision Log, Onboarding.
 
 ## Next up
 - **Live with the Mastery/GP skeleton before extending it.** It exists to answer one question — does "practice accumulates → unlocks something deliberately claimed" fix the flatness real use surfaced — not to be the finished system. Don't build node dependencies, tiered costs, or a domain-scoped economy until that question has a real answer.
-- Onboarding + feature guide, likely built as one combined first-run experience rather than two separate things.
+- The identity/future-self first-run moment (Peterson's self-authoring) is still open — the Guide tab covers the practical "what is this" half, not the symbolic one.
 - Editable/custom recovery quest sets (see Deferred below) is the next natural Inn follow-up if it comes up in UAT.
 - Keep this document current going forward — it was written specifically to stop drifting out of sync the way the original spec did.
 

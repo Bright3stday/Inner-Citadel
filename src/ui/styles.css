@@ -41,27 +41,28 @@ body {
 .app[data-tab='daily'] .panel-daily,
 .app[data-tab='citadel'] .panel-citadel,
 .app[data-tab='review'] .panel-review,
-.app[data-tab='settings'] .panel-settings {
+.app[data-tab='settings'] .panel-settings,
+.app[data-tab='guide'] .panel-guide {
   display: block;
 }
 
 /* Wide: Daily and Citadel sit side by side regardless of tab — same
-   components, more room. Review and Settings still take the full view
-   when selected, so the split is suppressed for those two tabs. */
+   components, more room. Review, Settings, and Guide still take the
+   full view when selected, so the split is suppressed for those. */
 @media (min-width: 900px) {
   .app {
     max-width: 960px;
   }
 
-  .app:not([data-tab='settings']):not([data-tab='review']) .main {
+  .app:not([data-tab='settings']):not([data-tab='review']):not([data-tab='guide']) .main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     align-items: start;
   }
 
-  .app:not([data-tab='settings']):not([data-tab='review']) .panel-daily,
-  .app:not([data-tab='settings']):not([data-tab='review']) .panel-citadel {
+  .app:not([data-tab='settings']):not([data-tab='review']):not([data-tab='guide']) .panel-daily,
+  .app:not([data-tab='settings']):not([data-tab='review']):not([data-tab='guide']) .panel-citadel {
     display: block;
   }
 }
@@ -555,6 +556,33 @@ h1 {
   margin-top: 0.6rem;
   border-left: 3px solid var(--line);
   padding-left: 0.5rem;
+}
+
+.guide-section {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.guide-section summary {
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.guide-section[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.guide-section p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 0.6rem;
+}
+
+.guide-section p:last-child {
+  margin-bottom: 0;
 }
 
 .settings-success {
